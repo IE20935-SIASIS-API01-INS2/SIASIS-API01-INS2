@@ -93,6 +93,7 @@ router.post("/", (async (req: Request, res: Response) => {
       console.error("Error al verificar bloqueo de rol:", error);
       // No bloqueamos el inicio de sesión por errores en la verificación
     }
+    
 
     // Buscar el auxiliar por nombre de usuario
     const auxiliar = await prisma.t_Auxiliares.findUnique({
