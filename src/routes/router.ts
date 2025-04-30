@@ -23,6 +23,7 @@ import isPersonalAdministrativoAuthenticated from "../middlewares/isPersonalAdmi
 import decodedRol from "../middlewares/decodedRol";
 import { RolesSistema } from "../interfaces/shared/RolesSistema";
 import { RDP02 } from "../interfaces/shared/RDP02Instancias";
+import { RDP03 } from "../interfaces/shared/RDP03Instancias";
 
 const router = Router();
 
@@ -31,6 +32,7 @@ declare global {
   namespace Express {
     interface Request {
       RDP02_INSTANCE?: RDP02;
+      RDP03_INSTANCE?: RDP03;
       user?: UserAuthenticatedAPI01;
       isAuthenticated?: boolean;
       userRole?: RolesSistema;

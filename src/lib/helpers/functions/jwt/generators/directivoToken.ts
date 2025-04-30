@@ -14,6 +14,7 @@ export function generateDirectivoToken(
   const payload: JWTPayload = {
     ID_Usuario: String(directivoId),
     Nombre_Usuario: nombre_usuario,
+    
     Rol: RolesSistema.Directivo,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + DIRECTIVOS_SESSION_EXPIRATION, //Duracion de Token de 5 Horas para directivos

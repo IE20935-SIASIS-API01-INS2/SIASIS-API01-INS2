@@ -1,20 +1,28 @@
+// src/routes/auth/login/profesor-secundaria-tutor/index.ts
 import { Request, Response, Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { generateProfesorSecundariaToken } from "../../../../lib/helpers/functions/jwt/generators/profesorSecundariaToken";
 import { RolesSistema } from "../../../../interfaces/shared/RolesSistema";
 import { Genero } from "../../../../interfaces/shared/Genero";
 import { generateTutorToken } from "../../../../lib/helpers/functions/jwt/generators/tutorToken";
 import { verifyProfesorTutorSecundariaPassword } from "../../../../lib/helpers/encriptations/profesorTutotSecundaria.encriptation";
-import { ResponseSuccessLogin } from "../../../../interfaces/shared/apis/shared/login/types";
+import {
+  LoginBody,
+  ResponseSuccessLogin,
+} from "../../../../interfaces/shared/apis/shared/login/types";
 import { AuthBlockedDetails } from "../../../../interfaces/shared/apis/errors/details/AuthBloquedDetails";
 
-const router = Router();
-const prisma = new PrismaClient();
+import {
+  RequestErrorTypes,
+  UserErrorTypes,
+  PermissionErrorTypes,
+  SystemErrorTypes,
+} from "../../../../interfaces/shared/apis/errors";
+import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
+import { verificarBloqueoRolProfesorSecundaria } from "../../../../../core/databases/queries/RDP02/bloqueo-roles/verificarBloqueoRolProfesorSecundaria";
+import { verificarBloqueoRolTutor } from "../../../../../core/databases/queries/RDP02/bloqueo-roles/verificarBloqueoRolTutorSecundaria";
+import { buscarProfesorSecundariaConAulas } from "../../../../../core/databases/queries/RDP02/profesor-secundaria/buscarProfesoresSecundariaPorNombreDeUsuario";
 
-export interface LoginBody {
-  Nombre_Usuario: string;
-  Contraseña: string;
-}
+const router = Router();
 
 router.get("/", (async (req: Request, res: Response) => {
   return res.json({ message: "Login Profesor Secundaria / Tutor" });
@@ -27,10 +35,12 @@ router.post("/", (async (req: Request, res: Response) => {
 
     // Validar que se proporcionen ambos campos
     if (!Nombre_Usuario || !Contraseña) {
-      return res.status(400).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "El nombre de usuario y la contraseña son obligatorios",
-      });
+        errorType: RequestErrorTypes.MISSING_PARAMETERS,
+      };
+      return res.status(400).json(errorResponse);
     }
 
     // Este endpoint se usa tanto para profesores de secundaria como para tutores
@@ -38,21 +48,12 @@ router.post("/", (async (req: Request, res: Response) => {
     try {
       const tiempoActual = Math.floor(Date.now() / 1000); // Timestamp Unix actual en segundos
 
-      // Verificar bloqueo para Profesor Secundaria (sin filtro de timestamp)
-      const bloqueoProfesorSecundaria = await prisma.t_Bloqueo_Roles.findFirst({
-        where: {
-          Rol: RolesSistema.ProfesorSecundaria,
-          Bloqueo_Total: true,
-        },
-      });
+      // Verificar bloqueo para Profesor Secundaria
+      const bloqueoProfesorSecundaria =
+        await verificarBloqueoRolProfesorSecundaria();
 
-      // Verificar bloqueo para Tutor (sin filtro de timestamp)
-      const bloqueoTutor = await prisma.t_Bloqueo_Roles.findFirst({
-        where: {
-          Rol: RolesSistema.Tutor,
-          Bloqueo_Total: true,
-        },
-      });
+      // Verificar bloqueo para Tutor
+      const bloqueoTutor = await verificarBloqueoRolTutor();
 
       // Si ambos roles están bloqueados, informamos sobre el que tiene mayor tiempo de bloqueo
       // o indicamos que es un bloqueo permanente si ambos lo son
@@ -79,12 +80,15 @@ router.post("/", (async (req: Request, res: Response) => {
             esBloqueoPermanente: true,
           };
 
-          return res.status(403).json({
+          const errorResponse: ErrorResponseAPIBase = {
             success: false,
             message:
               "El acceso a profesores y tutores de secundaria está permanentemente bloqueado",
+            errorType: PermissionErrorTypes.ROLE_BLOCKED,
             details: errorDetails,
-          });
+          };
+
+          return res.status(403).json(errorResponse);
         }
 
         // Si solo uno es permanente, priorizamos ese
@@ -97,12 +101,15 @@ router.post("/", (async (req: Request, res: Response) => {
             esBloqueoPermanente: true,
           };
 
-          return res.status(403).json({
+          const errorResponse: ErrorResponseAPIBase = {
             success: false,
             message:
               "El acceso para profesores de secundaria está permanentemente bloqueado",
+            errorType: PermissionErrorTypes.ROLE_BLOCKED,
             details: errorDetails,
-          });
+          };
+
+          return res.status(403).json(errorResponse);
         }
 
         if (esTutorPermanente) {
@@ -114,11 +121,14 @@ router.post("/", (async (req: Request, res: Response) => {
             esBloqueoPermanente: true,
           };
 
-          return res.status(403).json({
+          const errorResponse: ErrorResponseAPIBase = {
             success: false,
             message: "El acceso para tutores está permanentemente bloqueado",
+            errorType: PermissionErrorTypes.ROLE_BLOCKED,
             details: errorDetails,
-          });
+          };
+
+          return res.status(403).json(errorResponse);
         }
 
         // Si ninguno es permanente, escogemos el que tenga mayor tiempo de bloqueo
@@ -154,12 +164,15 @@ router.post("/", (async (req: Request, res: Response) => {
           esBloqueoPermanente: false,
         };
 
-        return res.status(403).json({
+        const errorResponse: ErrorResponseAPIBase = {
           success: false,
           message:
             "El acceso a profesores y tutores de secundaria está temporalmente bloqueado",
+          errorType: PermissionErrorTypes.ROLE_BLOCKED,
           details: errorDetails,
-        });
+        };
+
+        return res.status(403).json(errorResponse);
       }
       // Si solo está bloqueado el rol de profesor de secundaria
       else if (bloqueoProfesorSecundaria) {
@@ -201,13 +214,16 @@ router.post("/", (async (req: Request, res: Response) => {
           esBloqueoPermanente: esBloqueoPermanente,
         };
 
-        return res.status(403).json({
+        const errorResponse: ErrorResponseAPIBase = {
           success: false,
           message: esBloqueoPermanente
             ? "El acceso para profesores de secundaria está permanentemente bloqueado"
             : "El acceso para profesores de secundaria está temporalmente bloqueado",
+          errorType: PermissionErrorTypes.ROLE_BLOCKED,
           details: errorDetails,
-        });
+        };
+
+        return res.status(403).json(errorResponse);
       }
       // Si solo está bloqueado el rol de tutor
       else if (bloqueoTutor) {
@@ -247,60 +263,45 @@ router.post("/", (async (req: Request, res: Response) => {
           esBloqueoPermanente: esBloqueoPermanente,
         };
 
-        return res.status(403).json({
+        const errorResponse: ErrorResponseAPIBase = {
           success: false,
           message: esBloqueoPermanente
             ? "El acceso para tutores está permanentemente bloqueado"
             : "El acceso para tutores está temporalmente bloqueado",
+          errorType: PermissionErrorTypes.ROLE_BLOCKED,
           details: errorDetails,
-        });
+        };
+
+        return res.status(403).json(errorResponse);
       }
     } catch (error) {
       console.error("Error al verificar bloqueo de rol:", error);
       // No bloqueamos el inicio de sesión por errores en la verificación
     }
 
-    // Buscar el profesor de secundaria por nombre de usuario
-    const profesorSecundaria = await prisma.t_Profesores_Secundaria.findUnique({
-      where: {
-        Nombre_Usuario: Nombre_Usuario,
-      },
-      select: {
-        DNI_Profesor_Secundaria: true,
-        Nombre_Usuario: true,
-        Contraseña: true,
-        Nombres: true,
-        Apellidos: true,
-        Google_Drive_Foto_ID: true,
-        Genero: true,
-        Estado: true,
-        // Verificar si es tutor mediante la relación con un aula
-        aulas: {
-          select: {
-            Id_Aula: true,
-            Nivel: true,
-            Grado: true,
-            Seccion: true,
-            Color: true,
-          },
-        },
-      },
-    });
+    // Buscar el profesor de secundaria por nombre de usuario (con sus aulas)
+    const profesorSecundaria = await buscarProfesorSecundariaConAulas(
+      Nombre_Usuario
+    );
 
-    // Si no existe el profesor de secundaria o las credenciales son incorrectas, retornar error
+    // Si no existe el profesor de secundaria, retornar error
     if (!profesorSecundaria) {
-      return res.status(401).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "Credenciales inválidas",
-      });
+        errorType: UserErrorTypes.INVALID_CREDENTIALS,
+      };
+      return res.status(401).json(errorResponse);
     }
 
     // Verificar si la cuenta está activa
     if (!profesorSecundaria.Estado) {
-      return res.status(403).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "Tu cuenta está inactiva. Contacta al administrador.",
-      });
+        errorType: UserErrorTypes.USER_INACTIVE,
+      };
+      return res.status(403).json(errorResponse);
     }
 
     // Verificar la contraseña
@@ -310,10 +311,12 @@ router.post("/", (async (req: Request, res: Response) => {
     );
 
     if (!isContraseñaValid) {
-      return res.status(401).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "Credenciales inválidas",
-      });
+        errorType: UserErrorTypes.INVALID_CREDENTIALS,
+      };
+      return res.status(401).json(errorResponse);
     }
 
     // Determinar si es tutor (tiene aula asignada)
@@ -354,10 +357,15 @@ router.post("/", (async (req: Request, res: Response) => {
     return res.status(200).json(response);
   } catch (error) {
     console.error("Error en inicio de sesión:", error);
-    return res.status(500).json({
+
+    const errorResponse: ErrorResponseAPIBase = {
       success: false,
       message: "Error en el servidor, por favor intente más tarde",
-    });
+      errorType: SystemErrorTypes.UNKNOWN_ERROR,
+      details: { error: String(error) },
+    };
+
+    return res.status(500).json(errorResponse);
   }
 }) as any);
 

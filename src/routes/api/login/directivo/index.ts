@@ -1,15 +1,26 @@
-import { Request, Response, Router } from "express";
-import { PrismaClient } from "@prisma/client";
+// src/routes/auth/login/directivo/index.ts
+import { Router, Request, Response } from "express";
 import { generateDirectivoToken } from "../../../../lib/helpers/functions/jwt/generators/directivoToken";
 import { verifyDirectivoPassword } from "../../../../lib/helpers/encriptations/directivo.encriptation";
 import { RolesSistema } from "../../../../interfaces/shared/RolesSistema";
 import { Genero } from "../../../../interfaces/shared/Genero";
-import { LoginBody } from "../auxiliar";
-import { ResponseSuccessLogin } from "../../../../interfaces/shared/apis/shared/login/types";
+import {
+  LoginBody,
+  ResponseSuccessLogin,
+} from "../../../../interfaces/shared/apis/shared/login/types";
 import { AuthBlockedDetails } from "../../../../interfaces/shared/apis/errors/details/AuthBloquedDetails";
 
+import {
+  RequestErrorTypes,
+  UserErrorTypes,
+  PermissionErrorTypes,
+  SystemErrorTypes,
+} from "../../../../interfaces/shared/apis/errors";
+import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
+import { verificarBloqueoRolDirectivo } from "../../../../../core/databases/queries/RDP02/bloqueo-roles/verificarBloqueoRolDirectivo";
+import { buscarDirectivoPorNombreUsuarioSelect } from "../../../../../core/databases/queries/RDP02/directivos/buscarDirectivosPorNombreDeUsuario";
+
 const router = Router();
-const prisma = new PrismaClient();
 
 router.get("/", (async (req: Request, res: Response) => {
   return res.json({ message: "Login Directivo" });
@@ -22,23 +33,20 @@ router.post("/", (async (req: Request, res: Response) => {
 
     // Validar que se proporcionen ambos campos
     if (!Nombre_Usuario || !Contraseña) {
-      return res.status(400).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "El nombre de usuario y la contraseña son obligatorios",
-      });
+        errorType: RequestErrorTypes.MISSING_PARAMETERS,
+      };
+      return res.status(400).json(errorResponse);
     }
 
     // Verificar si el rol de directivo está bloqueado
     try {
-      // Primero verificamos bloqueo total, sin importar el timestamp
-      const bloqueoRol = await prisma.t_Bloqueo_Roles.findFirst({
-        where: {
-          Rol: RolesSistema.Directivo,
-          Bloqueo_Total: true,
-        },
-      });
+      // Verificar bloqueo total
+      const bloqueoRol = await verificarBloqueoRolDirectivo();
 
-      // Dentro del bloque donde verificas el bloqueo:
+      // Si hay bloqueo, generar mensaje detallado
       if (bloqueoRol) {
         const tiempoActual = Math.floor(Date.now() / 1000);
         const timestampDesbloqueo = Number(bloqueoRol.Timestamp_Desbloqueo);
@@ -78,41 +86,44 @@ router.post("/", (async (req: Request, res: Response) => {
           esBloqueoPermanente: esBloqueoPermanente,
         };
 
-        return res.status(403).json({
+        const errorResponse: ErrorResponseAPIBase = {
           success: false,
           message: esBloqueoPermanente
             ? "El acceso para directivos está permanentemente bloqueado"
             : "El acceso para directivos está temporalmente bloqueado",
+          errorType: PermissionErrorTypes.ROLE_BLOCKED,
           details: errorDetails,
-        });
+        };
+
+        return res.status(403).json(errorResponse);
       }
     } catch (error) {
       console.error("Error al verificar bloqueo de rol:", error);
       // No bloqueamos el inicio de sesión por errores en la verificación
     }
 
-    // Buscar el directivo por nombre de usuario
-    const directivo = await prisma.t_Directivos.findUnique({
-      where: {
-        Nombre_Usuario: Nombre_Usuario,
-      },
-      select: {
-        Id_Directivo: true,
-        Nombre_Usuario: true,
-        Contraseña: true,
-        Nombres: true,
-        Apellidos: true,
-        Google_Drive_Foto_ID: true,
-        Genero: true,
-      },
-    });
+    // Buscar el directivo por nombre de usuario con campos específicos
+    const directivo = await buscarDirectivoPorNombreUsuarioSelect(
+      Nombre_Usuario,
+      [
+        "Id_Directivo",
+        "Nombre_Usuario",
+        "Contraseña",
+        "Nombres",
+        "Apellidos",
+        "Google_Drive_Foto_ID",
+        "Genero",
+      ]
+    );
 
-    // Si no existe el directivo o las credenciales son incorrectas, retornar error
+    // Si no existe el directivo, retornar error
     if (!directivo) {
-      return res.status(401).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "Credenciales inválidas",
-      });
+        errorType: UserErrorTypes.INVALID_CREDENTIALS,
+      };
+      return res.status(401).json(errorResponse);
     }
 
     // Verificar la contraseña
@@ -122,10 +133,14 @@ router.post("/", (async (req: Request, res: Response) => {
     );
 
     if (!isContraseñaValid) {
-      return res.status(401).json({
+      // Aquí podrías implementar un contador de intentos fallidos
+      // y si supera cierto límite, bloquear temporalmente
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "Credenciales inválidas",
-      });
+        errorType: UserErrorTypes.INVALID_CREDENTIALS,
+      };
+      return res.status(401).json(errorResponse);
     }
 
     // Generar token JWT
@@ -151,10 +166,15 @@ router.post("/", (async (req: Request, res: Response) => {
     return res.status(200).json(response);
   } catch (error) {
     console.error("Error en inicio de sesión:", error);
-    return res.status(500).json({
+
+    const errorResponse: ErrorResponseAPIBase = {
       success: false,
       message: "Error en el servidor, por favor intente más tarde",
-    });
+      errorType: SystemErrorTypes.UNKNOWN_ERROR,
+      details: { error: String(error) },
+    };
+
+    return res.status(500).json(errorResponse);
   }
 }) as any);
 

@@ -136,6 +136,7 @@ router.post("/", (async (req: Request, res: Response) => {
     );
 
     const response: ResponseSuccessLogin = {
+      success: true,
       message: "Inicio de sesión exitoso",
       data: {
         Apellidos: responsable.Apellidos,

@@ -1,15 +1,26 @@
+// src/routes/auth/login/profesor-primaria/index.ts
 import { Request, Response, Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { verifyProfesorPrimariaPassword } from "../../../../lib/helpers/encriptations/profesorPrimaria.encriptation";
 import { generateProfesorPrimariaToken } from "../../../../lib/helpers/functions/jwt/generators/profesorPrimariaToken";
 import { RolesSistema } from "../../../../interfaces/shared/RolesSistema";
 import { Genero } from "../../../../interfaces/shared/Genero";
-import { LoginBody } from "../auxiliar";
-import { ResponseSuccessLogin } from "../../../../interfaces/shared/apis/shared/login/types";
+import {
+  LoginBody,
+  ResponseSuccessLogin,
+} from "../../../../interfaces/shared/apis/shared/login/types";
 import { AuthBlockedDetails } from "../../../../interfaces/shared/apis/errors/details/AuthBloquedDetails";
 
+import {
+  RequestErrorTypes,
+  UserErrorTypes,
+  PermissionErrorTypes,
+  SystemErrorTypes,
+} from "../../../../interfaces/shared/apis/errors";
+import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
+import { verificarBloqueoRolProfesorPrimaria } from "../../../../../core/databases/queries/RDP02/bloqueo-roles/verificarBloqueoRolProfesorPrimaria";
+import { buscarProfesorPrimariaPorNombreUsuarioSelect } from "../../../../../core/databases/queries/RDP02/profesor-primaria/buscarProfesorPrimariaPorNombreDeUsuario";
+
 const router = Router();
-const prisma = new PrismaClient();
 
 router.get("/", (async (req: Request, res: Response) => {
   return res.json({ message: "Login Profesor de Primaria" });
@@ -22,21 +33,17 @@ router.post("/", (async (req: Request, res: Response) => {
 
     // Validar que se proporcionen ambos campos
     if (!Nombre_Usuario || !Contraseña) {
-      return res.status(400).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "El nombre de usuario y la contraseña son obligatorios",
-      });
+        errorType: RequestErrorTypes.MISSING_PARAMETERS,
+      };
+      return res.status(400).json(errorResponse);
     }
 
     // Verificar si el rol de profesor de primaria está bloqueado
     try {
-      // Primero verificamos bloqueo total, sin importar el timestamp
-      const bloqueoRol = await prisma.t_Bloqueo_Roles.findFirst({
-        where: {
-          Rol: RolesSistema.ProfesorPrimaria,
-          Bloqueo_Total: true,
-        },
-      });
+      const bloqueoRol = await verificarBloqueoRolProfesorPrimaria();
 
       if (bloqueoRol) {
         const tiempoActual = Math.floor(Date.now() / 1000);
@@ -77,50 +84,55 @@ router.post("/", (async (req: Request, res: Response) => {
           esBloqueoPermanente: esBloqueoPermanente,
         };
 
-        return res.status(403).json({
+        const errorResponse: ErrorResponseAPIBase = {
           success: false,
           message: esBloqueoPermanente
             ? "El acceso para profesores de primaria está permanentemente bloqueado"
             : "El acceso para profesores de primaria está temporalmente bloqueado",
+          errorType: PermissionErrorTypes.ROLE_BLOCKED,
           details: errorDetails,
-        });
+        };
+
+        return res.status(403).json(errorResponse);
       }
     } catch (error) {
       console.error("Error al verificar bloqueo de rol:", error);
       // No bloqueamos el inicio de sesión por errores en la verificación
     }
 
-    // Buscar el profesor de primaria por nombre de usuario
-    const profesorPrimaria = await prisma.t_Profesores_Primaria.findUnique({
-      where: {
-        Nombre_Usuario: Nombre_Usuario,
-      },
-      select: {
-        DNI_Profesor_Primaria: true,
-        Nombre_Usuario: true,
-        Contraseña: true,
-        Nombres: true,
-        Apellidos: true,
-        Google_Drive_Foto_ID: true,
-        Genero: true,
-        Estado: true,
-      },
-    });
+    // Buscar el profesor de primaria por nombre de usuario con campos específicos
+    const profesorPrimaria = await buscarProfesorPrimariaPorNombreUsuarioSelect(
+      Nombre_Usuario,
+      [
+        "DNI_Profesor_Primaria",
+        "Nombre_Usuario",
+        "Contraseña",
+        "Nombres",
+        "Apellidos",
+        "Google_Drive_Foto_ID",
+        "Genero",
+        "Estado",
+      ]
+    );
 
-    // Si no existe el profesor de primaria o las credenciales son incorrectas, retornar error
+    // Si no existe el profesor de primaria, retornar error
     if (!profesorPrimaria) {
-      return res.status(401).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "Credenciales inválidas",
-      });
+        errorType: UserErrorTypes.INVALID_CREDENTIALS,
+      };
+      return res.status(401).json(errorResponse);
     }
 
     // Verificar si la cuenta está activa
     if (!profesorPrimaria.Estado) {
-      return res.status(403).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "Tu cuenta está inactiva. Contacta al administrador.",
-      });
+        errorType: UserErrorTypes.USER_INACTIVE,
+      };
+      return res.status(403).json(errorResponse);
     }
 
     // Verificar la contraseña
@@ -130,10 +142,12 @@ router.post("/", (async (req: Request, res: Response) => {
     );
 
     if (!isContraseñaValid) {
-      return res.status(401).json({
+      const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "Credenciales inválidas",
-      });
+        errorType: UserErrorTypes.INVALID_CREDENTIALS,
+      };
+      return res.status(401).json(errorResponse);
     }
 
     // Generar token JWT
@@ -159,10 +173,15 @@ router.post("/", (async (req: Request, res: Response) => {
     return res.status(200).json(response);
   } catch (error) {
     console.error("Error en inicio de sesión:", error);
-    return res.status(500).json({
+
+    const errorResponse: ErrorResponseAPIBase = {
       success: false,
       message: "Error en el servidor, por favor intente más tarde",
-    });
+      errorType: SystemErrorTypes.UNKNOWN_ERROR,
+      details: { error: String(error) },
+    };
+
+    return res.status(500).json(errorResponse);
   }
 }) as any);
 

@@ -1,5 +1,5 @@
 // src/core/database/connectors/postgres.ts
-import { Pool, QueryResult } from "pg";
+import { Pool, QueryResult, QueryResultRow } from "pg";
 import dotenv from "dotenv";
 import {
   PG_CONNECTION_TIMEOUT,
@@ -8,9 +8,10 @@ import {
 } from "../../../src/constants/NEON_POSTGRES_CONFIG";
 import { RolesSistema } from "../../../src/interfaces/shared/RolesSistema";
 import { RDP02 } from "../../../src/interfaces/shared/RDP02Instancias";
+import { getRDP02InstancesForThisRol } from "../../../src/lib/helpers/instances/getRDP02InstancesForThisRol";
+import { esOperacionBDLectura } from "../../../src/lib/helpers/comprobations/esOperacionBDLectura";
 import { getRDP02DatabaseURLForThisInstance } from "../../../src/lib/helpers/instances/getRDP02DatabaseURLForThisInstance";
 import { getInstanciasRDP02AfectadasPorRoles } from "../../../src/lib/helpers/instances/getInstanciasRDP02AfectadasPorRoles";
-import { esOperacionBDLectura } from "../../../src/lib/helpers/comprobations/esOperacionBDLectura";
 import { consultarConEMCS01 } from "../../external/github/EMCS01/consultarConEMCS01";
 
 dotenv.config();
@@ -50,21 +51,93 @@ function getOrCreatePool(connectionURL: string): Pool {
 }
 
 /**
+ * Obtiene una instancia aleatoria para un rol específico
+ * @param rol Rol del sistema
+ * @returns Instancia aleatoria
+ */
+function getRandomInstanceForRole(rol: RolesSistema): RDP02 {
+  // Obtener instancias disponibles para el rol
+  const instances = getRDP02InstancesForThisRol(rol);
+
+  if (instances.length === 0) {
+    throw new Error(`No hay instancias configuradas para el rol ${rol}`);
+  }
+
+  // Seleccionar una instancia aleatoria
+  const randomIndex = Math.floor(Math.random() * instances.length);
+  return instances[randomIndex];
+}
+
+/**
+ * Obtiene una instancia aleatoria de cualquiera de las disponibles
+ * @returns Instancia aleatoria de entre todas las configuradas
+ */
+function getRandomInstance(): RDP02 {
+  // Obtener todas las instancias disponibles
+  const allInstances = Object.values(RDP02);
+  
+  if (allInstances.length === 0) {
+    throw new Error("No hay instancias configuradas en el sistema");
+  }
+  
+  // Seleccionar una instancia aleatoria
+  const randomIndex = Math.floor(Math.random() * allInstances.length);
+  return allInstances[randomIndex];
+}
+
+
+/**
  * Ejecuta una consulta SQL en la base de datos
- * @param instanciaEnUso Instancia donde se ejecutará la consulta inicialmente
+ * @param instanciaEnUso Instancia donde se ejecutará la consulta inicialmente (opcional para lecturas)
  * @param text Consulta SQL
  * @param params Parámetros de la consulta
- * @param rolesAfectados Roles cuyos datos serán afectados (solo necesario para operaciones de escritura)
+ * @param rol Rol del usuario que ejecuta la consulta (opcional para lecturas)
+ * @param rolesAfectados Roles cuyos datos serán afectados (requerido para operaciones de escritura)
  * @returns Resultado de la consulta
  */
-export async function query(
-  instanciaEnUso: RDP02,
+export async function query<T extends QueryResultRow = any>(
+  instanciaEnUso: RDP02 | undefined,
   text: string,
   params: any[] = [],
+  rol?: RolesSistema,
   rolesAfectados?: RolesSistema[]
-): Promise<QueryResult> {
+): Promise<QueryResult<T>> {
   // Determinar si es operación de lectura o escritura
   const isRead = esOperacionBDLectura(text);
+
+  // Validar los parámetros según el tipo de operación
+  if (isRead) {
+    // Para operaciones de LECTURA
+    if (instanciaEnUso === undefined) {
+      // Si hay rol especificado, seleccionar instancia para ese rol
+      if (rol) {
+        instanciaEnUso = getRandomInstanceForRole(rol);
+        console.log(
+          `Operación de lectura: Seleccionada instancia aleatoria ${instanciaEnUso} para rol ${rol}`
+        );
+      } 
+      // Si no hay rol especificado, seleccionar cualquier instancia
+      else {
+        instanciaEnUso = getRandomInstance();
+        console.log(
+          `Operación de lectura: Seleccionada instancia aleatoria ${instanciaEnUso} (sin rol específico)`
+        );
+      }
+    }
+  } else {
+    // Para operaciones de ESCRITURA
+    if (instanciaEnUso === undefined) {
+      throw new Error(
+        "Para operaciones de escritura, se requiere especificar una instancia"
+      );
+    }
+
+    if (!rolesAfectados || rolesAfectados.length === 0) {
+      throw new Error(
+        "Para operaciones de escritura, se requiere especificar los roles afectados"
+      );
+    }
+  }
 
   // Obtener la URL de conexión para la instancia en uso
   const connectionURL = getRDP02DatabaseURLForThisInstance(instanciaEnUso);
@@ -93,16 +166,18 @@ export async function query(
       // Calcular duración
       const duration = Date.now() - start;
 
-      // Registrar información de la consulta
-      console.log(`Query ejecutada en instancia ${instanciaEnUso}`, {
-        operacion: isRead ? "Lectura" : "Escritura",
-        text: text.substring(0, 80) + (text.length > 80 ? "..." : ""),
-        duration,
-        filas: result.rowCount,
-      });
+      // Si estamos en entorno de desarrollo, imprimir logs
+      if (process.env.ENTORNO === "D") {
+        // Registrar información de la consulta
+        console.log(`Query ejecutada en instancia ${instanciaEnUso}`, {
+          operacion: isRead ? "Lectura" : "Escritura",
+          text: text.substring(0, 80) + (text.length > 80 ? "..." : ""),
+          duration,
+          filas: result.rowCount,
+        });
+      }
 
-      // Si es una operación de escritura y se proporcionaron roles afectados,
-      // replicar en las demás instancias a través del webhook
+      // Si es una operación de escritura, replicar en las demás instancias a través del webhook
       if (!isRead && rolesAfectados && rolesAfectados.length > 0) {
         // Obtener las instancias afectadas (únicas y excluyendo la instancia en uso)
         const instanciasAActualizar = getInstanciasRDP02AfectadasPorRoles(
@@ -112,12 +187,14 @@ export async function query(
 
         // Si hay instancias para actualizar, enviar el webhook
         if (instanciasAActualizar.length > 0) {
+          console.log(
+            `Replicando operación de escritura en: ${instanciasAActualizar.join(
+              ", "
+            )}`
+          );
+
           // Ejecutar de forma asíncrona para no retrasar la respuesta
-          consultarConEMCS01(
-            text,
-            params,
-            instanciasAActualizar
-          ).catch((err) =>
+          consultarConEMCS01(text, params, instanciasAActualizar).catch((err) =>
             console.error("Error en replicación asíncrona:", err)
           );
         }
@@ -139,16 +216,29 @@ export async function query(
 
 /**
  * Ejecuta una transacción en la base de datos
- * @param instanciaEnUso Instancia donde se ejecutará la transacción
+ * @param instanciaEnUso Instancia donde se ejecutará la transacción (obligatorio)
  * @param callback Función que contiene las operaciones de la transacción
- * @param rolesAfectados Roles cuyos datos serán afectados (opcional)
+ * @param rolesAfectados Roles cuyos datos serán afectados (obligatorio para transacciones)
  * @returns Resultado de la transacción
  */
-export async function transaction<T>(
+export async function transaction<T = any>(
   instanciaEnUso: RDP02,
   callback: (client: any) => Promise<T>,
-  rolesAfectados?: RolesSistema[]
+  rolesAfectados: RolesSistema[]
 ): Promise<T> {
+  // Validar parámetros requeridos
+  if (!instanciaEnUso) {
+    throw new Error(
+      "Para transacciones, se requiere especificar una instancia"
+    );
+  }
+
+  if (!rolesAfectados || rolesAfectados.length === 0) {
+    throw new Error(
+      "Para transacciones, se requiere especificar los roles afectados"
+    );
+  }
+
   // Obtener la URL de conexión para la instancia en uso
   const connectionURL = getRDP02DatabaseURLForThisInstance(instanciaEnUso);
 
@@ -175,62 +265,50 @@ export async function transaction<T>(
     // Iniciar transacción
     await client.query("BEGIN");
 
-    // Si hay roles afectados, usamos un proxy para interceptar las consultas
-    let result: T;
+    // Crear proxy para interceptar consultas de escritura
+    const enhancedClient = new Proxy(client, {
+      get(target, prop, receiver) {
+        // Solo interceptamos el método query
+        if (prop === "query") {
+          // Devolvemos una función que reemplaza a query
+          return async function (textOrConfig: any, values?: any) {
+            // Extraer información según el tipo de llamada
+            let text: string | undefined;
+            let params: any[] = [];
 
-    if (rolesAfectados && rolesAfectados.length > 0) {
-      // Creamos un objeto proxy "mejorado" que captura las consultas de escritura
-      const enhancedClient = new Proxy(client, {
-        get(target, prop, receiver) {
-          // Solo interceptamos el método query
-          if (prop === "query") {
-            // Devolvemos una función que reemplaza a query
-            return async function (textOrConfig: any, values?: any) {
-              // Extraer información según el tipo de llamada
-              let text: string | undefined;
-              let params: any[] = [];
+            if (typeof textOrConfig === "string") {
+              text = textOrConfig;
+              params = values || [];
+            } else if (textOrConfig && typeof textOrConfig === "object") {
+              text = textOrConfig.text || textOrConfig.name;
+              params = textOrConfig.values || [];
+            }
 
-              if (typeof textOrConfig === "string") {
-                text = textOrConfig;
-                params = values || [];
-              } else if (textOrConfig && typeof textOrConfig === "object") {
-                text = textOrConfig.text || textOrConfig.name;
-                params = textOrConfig.values || [];
-              }
+            // Ejecutar la consulta original
+            const result = await target.query(textOrConfig, values);
 
-              // Ejecutar la consulta original
-              const result = await target.query(textOrConfig, values);
+            // Capturar solo consultas de escritura
+            if (text && !esOperacionBDLectura(text)) {
+              writeQueries.push({ text, params });
+            }
 
-              // Capturar solo consultas de escritura
-              if (text && !esOperacionBDLectura(text)) {
-                writeQueries.push({ text, params });
-              }
+            return result;
+          };
+        }
 
-              return result;
-            };
-          }
+        // Para cualquier otra propiedad, devolvemos el valor original
+        return Reflect.get(target, prop, receiver);
+      },
+    });
 
-          // Para cualquier otra propiedad, devolvemos el valor original
-          return Reflect.get(target, prop, receiver);
-        },
-      });
-
-      // Ejecutar callback con el cliente proxy
-      result = await callback(enhancedClient);
-    } else {
-      // Si no hay roles afectados, simplemente ejecutamos el callback con el cliente original
-      result = await callback(client);
-    }
+    // Ejecutar callback con el cliente proxy
+    const result = await callback(enhancedClient);
 
     // Confirmar transacción
     await client.query("COMMIT");
 
-    // Si hay roles afectados y consultas de escritura, replicar en las demás instancias
-    if (
-      rolesAfectados &&
-      rolesAfectados.length > 0 &&
-      writeQueries.length > 0
-    ) {
+    // Si hay consultas de escritura, replicar en las demás instancias
+    if (writeQueries.length > 0) {
       // Obtener las instancias afectadas
       const instanciasAActualizar = getInstanciasRDP02AfectadasPorRoles(
         rolesAfectados,
@@ -239,12 +317,12 @@ export async function transaction<T>(
 
       // Si hay instancias para actualizar, enviar webhook para cada consulta
       if (instanciasAActualizar.length > 0) {
+        console.log(
+          `Replicando transacción en: ${instanciasAActualizar.join(", ")}`
+        );
+
         for (const { text, params } of writeQueries) {
-          consultarConEMCS01(
-            text,
-            params,
-            instanciasAActualizar
-          ).catch((err) =>
+          consultarConEMCS01(text, params, instanciasAActualizar).catch((err) =>
             console.error("Error en replicación asíncrona de transacción:", err)
           );
         }
@@ -274,6 +352,95 @@ export async function transaction<T>(
     }
   }
 }
+
+/**
+ * Cliente de PostgreSQL que facilita operaciones con múltiples instancias
+ */
+export const postgresClient = {
+  /**
+   * Ejecuta una consulta de lectura en una instancia específica o aleatoria para un rol
+   * @param text Consulta SQL (debe ser de lectura)
+   * @param params Parámetros de la consulta
+   * @param options Opciones adicionales: instancia específica o rol para seleccionar instancia
+   * @returns Resultado de la consulta
+   */
+  read: async <T extends QueryResultRow = any>(
+    text: string,
+    params: any[] = [],
+    options: { instancia?: RDP02; rol?: RolesSistema } = {}
+  ): Promise<QueryResult<T>> => {
+    // Verificar que sea una operación de lectura
+    if (!esOperacionBDLectura(text)) {
+      throw new Error(
+        "Este método solo debe usarse para operaciones de lectura"
+      );
+    }
+
+    // Ejecutar la consulta
+    return await query<T>(options.instancia, text, params, options.rol);
+  },
+
+  /**
+   * Ejecuta una operación de escritura en una instancia específica y la replica en otras instancias relevantes
+   * @param instancia Instancia donde se ejecutará inicialmente la operación (obligatorio)
+   * @param text Consulta SQL (debe ser de escritura)
+   * @param params Parámetros de la consulta
+   * @param rolesAfectados Roles cuyos datos serán afectados (obligatorio)
+   * @returns Resultado de la operación
+   */
+  write: async <T extends QueryResultRow = any>(
+    instancia: RDP02,
+    text: string,
+    params: any[] = [],
+    rolesAfectados: RolesSistema[]
+  ): Promise<QueryResult<T>> => {
+    // Verificar que sea una operación de escritura
+    if (esOperacionBDLectura(text)) {
+      throw new Error(
+        "Este método solo debe usarse para operaciones de escritura"
+      );
+    }
+
+    // Validar parámetros requeridos
+    if (!instancia) {
+      throw new Error(
+        "Para operaciones de escritura, se requiere especificar una instancia"
+      );
+    }
+
+    if (!rolesAfectados || rolesAfectados.length === 0) {
+      throw new Error(
+        "Para operaciones de escritura, se requiere especificar los roles afectados"
+      );
+    }
+
+    // Ejecutar la consulta
+    return await query<T>(instancia, text, params, undefined, rolesAfectados);
+  },
+
+  /**
+   * Ejecuta una transacción en una instancia específica y replica las operaciones de escritura
+   * @param instancia Instancia donde se ejecutará la transacción (obligatorio)
+   * @param callback Función que contiene las operaciones de la transacción
+   * @param rolesAfectados Roles cuyos datos serán afectados (obligatorio)
+   * @returns Resultado de la transacción
+   */
+  transaction: async <T = any>(
+    instancia: RDP02,
+    callback: (client: any) => Promise<T>,
+    rolesAfectados: RolesSistema[]
+  ): Promise<T> => {
+    return await transaction<T>(instancia, callback, rolesAfectados);
+  },
+
+  /**
+   * Cierra todos los pools de conexiones
+   */
+  closeAllConnections: async (): Promise<void> => {
+    await closeAllPools();
+  },
+};
+
 /**
  * Cierra todos los pools de conexiones
  */
