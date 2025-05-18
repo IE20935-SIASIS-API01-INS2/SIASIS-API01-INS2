@@ -13,8 +13,6 @@ import { esOperacionBDLectura } from "../../../src/lib/helpers/comprobations/esO
 import { getRDP02DatabaseURLForThisInstance } from "../../../src/lib/helpers/instances/getRDP02DatabaseURLForThisInstance";
 import { getInstanciasRDP02AfectadasPorRoles } from "../../../src/lib/helpers/instances/getInstanciasRDP02AfectadasPorRoles";
 import { consultarConEMCS01 } from "../../external/github/EMCS01/consultarConEMCS01";
-import { ENTORNO } from "../../../src/constants/ENTORNO";
-import { Entorno } from "../../../src/interfaces/shared/Entornos";
 
 dotenv.config();
 
