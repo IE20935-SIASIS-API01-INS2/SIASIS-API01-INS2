@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { RolesSistema } from "../interfaces/shared/RolesSistema";
-import { PrismaClient } from "@prisma/client";
 import {
   AuxiliarAuthenticated,
   JWTPayload,
@@ -13,8 +12,7 @@ import {
   TokenErrorTypes,
   UserErrorTypes,
 } from "../interfaces/shared/apis/errors";
-
-const prisma = new PrismaClient();
+import { buscarAuxiliarPorDNISelect } from "../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorDNI";
 
 // Middleware para verificar si el usuario es un Auxiliar
 const isAuxiliarAuthenticated = async (
@@ -108,14 +106,11 @@ const isAuxiliarAuthenticated = async (
         }
 
         // Verificar si el auxiliar existe y está activo
-        const auxiliar = await prisma.t_Auxiliares.findUnique({
-          where: {
-            DNI_Auxiliar: decodedPayload.ID_Usuario,
-          },
-          select: {
-            Estado: true,
-          },
-        });
+        // Aquí reemplazamos la llamada directa a Prisma por nuestra función desacoplada
+        const auxiliar = await buscarAuxiliarPorDNISelect(
+          decodedPayload.ID_Usuario,
+          ["Estado"]
+        );
 
         if (!auxiliar || !auxiliar.Estado) {
           req.authError = {
@@ -142,6 +137,7 @@ const isAuxiliarAuthenticated = async (
       // Marcar como autenticado para que los siguientes middlewares no reprocesen
       req.isAuthenticated = true;
       req.userRole = RolesSistema.Auxiliar;
+      req.RDP02_INSTANCE = decodedPayload.RDP02_INSTANCE;
 
       // Si todo está bien, continuar
       next();

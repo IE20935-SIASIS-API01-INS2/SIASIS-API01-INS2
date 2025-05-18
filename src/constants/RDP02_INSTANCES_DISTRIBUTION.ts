@@ -2,11 +2,6 @@ import { Entorno } from "../interfaces/shared/Entornos";
 import { RDP02 } from "../interfaces/shared/RDP02Instancias";
 import { ENTORNO } from "./ENTORNO";
 
-
-
-
-
-
 // Definición de las instancias de RDP02
 export const DIRECTIVO_INSTANCES =
   ENTORNO === Entorno.PRODUCCION ? [RDP02.INS1] : [RDP02.INS1];
@@ -22,11 +17,6 @@ export const TUTOR_INSTANCES =
 
 export const PROFESOR_PRIMARIA_INSTANCES =
   ENTORNO === Entorno.PRODUCCION ? [RDP02.INS3] : [RDP02.INS3];
-
-
-
-
-
 
 // Mapa que relaciona cada instancia con su URL de conexión
 export const RDP02_INSTANCES_DATABASE_URL_MAP: Map<RDP02, string | undefined> =

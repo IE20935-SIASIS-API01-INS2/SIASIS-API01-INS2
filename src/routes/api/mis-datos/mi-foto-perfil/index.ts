@@ -39,6 +39,7 @@ router.put("/", upload.single("foto"), (async (req: Request, res: Response) => {
   try {
     const Rol = req.userRole!;
     const userData = req.user!;
+    const rdp02EnUso = req.RDP02_INSTANCE!;
     const file = req.file;
 
     // Verificar que el rol del token coincide con el rol solicitado
@@ -117,7 +118,7 @@ router.put("/", upload.single("foto"), (async (req: Request, res: Response) => {
     }
 
     // Usar la función centralizada para subir la foto
-    const resultado = await subirFotoPerfil(Rol, file, identificador);
+    const resultado = await subirFotoPerfil(rdp02EnUso,Rol, file, identificador);
 
     if (!resultado.success) {
       return res.status(404).json({

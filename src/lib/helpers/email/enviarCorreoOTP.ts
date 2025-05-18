@@ -18,8 +18,8 @@ export async function enviarCorreoOTP(
   try {
     // Verificar variables de entorno
     if (
-      !process.env.SIASIS_EMAIL_USER ||
-      !process.env.SIASIS_EMAIL_APPLICATION_PASSWORD
+      !process.env.SE01_SIASIS_EMAIL_USER ||
+      !process.env.SE01_SIASIS_EMAIL_APPLICATION_PASSWORD
     ) {
       console.error(
         "Error: Variables de entorno SIASIS_EMAIL_USER o SIASIS_EMAIL_APPLICATION_PASSWORD no configuradas."
@@ -33,8 +33,8 @@ export async function enviarCorreoOTP(
       port: 587,
       secure: false, // true para 465, false para otros puertos
       auth: {
-        user: process.env.SIASIS_EMAIL_USER,
-        pass: process.env.SIASIS_EMAIL_APPLICATION_PASSWORD,
+        user: process.env.SE01_SIASIS_EMAIL_USER,
+        pass: process.env.SE01_SIASIS_EMAIL_APPLICATION_PASSWORD,
       },
       // debug: true,
       // logger: true,
@@ -254,7 +254,7 @@ export async function enviarCorreoOTP(
     `;
 
     const mailOptions = {
-      from: `"Sistema I.E. 20935" <${process.env.SIASIS_EMAIL_USER}>`,
+      from: `"Sistema I.E. 20935" <${process.env.SE01_SIASIS_EMAIL_USER}>`,
       to: destinatario,
       subject: asunto,
       html: htmlContent,

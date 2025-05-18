@@ -46,7 +46,7 @@ export async function buscarProfesorSecundariaPorNombreUsuario(
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos del profesor con sus aulas asignadas o null si no existe
  */
-export async function buscarProfesorSecundariaConAulas(
+export async function buscarProfesorSecundariaConAulasPorNombreDeUsuario(
   nombreUsuario: string,
   instanciaEnUso?: RDP02
 ): Promise<ProfesorSecundariaConAulas | null> {

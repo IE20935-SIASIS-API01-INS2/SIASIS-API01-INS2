@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { RolesSistema } from "../interfaces/shared/RolesSistema";
-import { PrismaClient } from "@prisma/client";
 import { verificarBloqueoRol } from "../lib/helpers/verificators/verificarBloqueoRol";
 import {
   DirectivoAuthenticated,
@@ -13,8 +12,7 @@ import {
   TokenErrorTypes,
   UserErrorTypes,
 } from "../interfaces/shared/apis/errors";
-
-const prisma = new PrismaClient();
+import { buscarDirectivoPorId } from "../../core/databases/queries/RDP02/directivos/buscarDirectivoPorId";
 
 // Middleware para verificar si el usuario es un Directivo
 const isDirectivoAuthenticated = async (
@@ -108,11 +106,10 @@ const isDirectivoAuthenticated = async (
         }
 
         // Verificar si el directivo existe
-        const directivo = await prisma.t_Directivos.findUnique({
-          where: {
-            Id_Directivo: Number(decodedPayload.ID_Usuario),
-          },
-        });
+        // Aquí reemplazamos la llamada directa a Prisma por nuestra función desacoplada
+        const directivo = await buscarDirectivoPorId(
+          Number(decodedPayload.ID_Usuario)
+        );
 
         if (!directivo) {
           req.authError = {
@@ -139,6 +136,7 @@ const isDirectivoAuthenticated = async (
       // Marcar como autenticado para que los siguientes middlewares no reprocesen
       req.isAuthenticated = true;
       req.userRole = RolesSistema.Directivo;
+      req.RDP02_INSTANCE = decodedPayload.RDP02_INSTANCE;
 
       // Si todo está bien, continuar
       next();
@@ -187,4 +185,5 @@ const isDirectivoAuthenticated = async (
     next();
   }
 };
+
 export default isDirectivoAuthenticated;

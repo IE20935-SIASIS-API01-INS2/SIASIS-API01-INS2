@@ -23,7 +23,7 @@ import { buscarDirectivoPorNombreUsuarioSelect } from "../../../../../core/datab
 const router = Router();
 
 router.get("/", (async (req: Request, res: Response) => {
-  return res.json({ message: "Login Directivo" });
+  return res.json({ message: "Login Directivo Bienvenido" });
 }) as any);
 
 // Ruta de login

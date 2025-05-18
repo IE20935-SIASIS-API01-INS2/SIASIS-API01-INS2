@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { RolesSistema } from "../interfaces/shared/RolesSistema";
-import { PrismaClient } from "@prisma/client";
 import { verificarBloqueoRol } from "../lib/helpers/verificators/verificarBloqueoRol";
 import {
   JWTPayload,
@@ -13,8 +12,7 @@ import {
   TokenErrorTypes,
   UserErrorTypes,
 } from "../interfaces/shared/apis/errors";
-
-const prisma = new PrismaClient();
+import { buscarPersonalAdministrativoPorDNISelect } from "../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorDNI";
 
 // Middleware para verificar si el usuario es Personal Administrativo
 const isPersonalAdministrativoAuthenticated = async (
@@ -112,14 +110,11 @@ const isPersonalAdministrativoAuthenticated = async (
         }
 
         // Verificar si el personal administrativo existe y está activo
-        const personal = await prisma.t_Personal_Administrativo.findUnique({
-          where: {
-            DNI_Personal_Administrativo: decodedPayload.ID_Usuario,
-          },
-          select: {
-            Estado: true,
-          },
-        });
+        // Reemplazo de la llamada a Prisma por la función desacoplada
+        const personal = await buscarPersonalAdministrativoPorDNISelect(
+          decodedPayload.ID_Usuario,
+          ["Estado"]
+        );
 
         if (!personal || !personal.Estado) {
           req.authError = {
@@ -147,7 +142,8 @@ const isPersonalAdministrativoAuthenticated = async (
       // Marcar como autenticado para que los siguientes middlewares no reprocesen
       req.isAuthenticated = true;
       req.userRole = RolesSistema.PersonalAdministrativo;
-
+      req.RDP02_INSTANCE = decodedPayload.RDP02_INSTANCE;
+      
       // Si todo está bien, continuar
       next();
     } catch (jwtError: any) {

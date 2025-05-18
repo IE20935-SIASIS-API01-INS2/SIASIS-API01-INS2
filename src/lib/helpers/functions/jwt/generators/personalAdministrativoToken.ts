@@ -1,7 +1,10 @@
 import { PERSONAL_ADMINISTRATIVO_SESSION_EXPIRATION } from "../../../../../constants/expirations";
 import { JWTPayload } from "../../../../../interfaces/shared/JWTPayload";
+import { RDP02 } from "../../../../../interfaces/shared/RDP02Instancias";
+import { RDP03 } from "../../../../../interfaces/shared/RDP03Instancias";
 import { RolesSistema } from "../../../../../interfaces/shared/RolesSistema";
 import jwt from "jsonwebtoken";
+import { getRandomElementFromEnum } from "../../../getRandomElementFromEnum";
 
 // Función para generar un token JWT para Personal Administrativo
 export function generatePersonalAdministrativoToken(
@@ -13,6 +16,8 @@ export function generatePersonalAdministrativoToken(
   const payload: JWTPayload = {
     ID_Usuario: dniPersonalAdministrativo,
     Nombre_Usuario: nombre_usuario,
+    RDP02_INSTANCE: getRandomElementFromEnum<RDP02>(RDP02),
+    RDP03_INSTANCE: getRandomElementFromEnum<RDP03>(RDP03),
     Rol: RolesSistema.PersonalAdministrativo,
     iat: Math.floor(Date.now() / 1000),
     exp:

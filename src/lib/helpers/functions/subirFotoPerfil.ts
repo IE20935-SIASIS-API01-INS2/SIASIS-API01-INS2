@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import { ActoresSistema } from "../../../interfaces/shared/ActoresSistema";
 import { RolesSistema } from "../../../interfaces/shared/RolesSistema";
 import {
@@ -8,11 +7,12 @@ import {
 } from "../../../interfaces/shared/apis/errors";
 import { deleteFileFromDrive } from "../../../../core/external/google/drive/deleteFileFromDrive";
 import { uploadFileToDrive } from "../../../../core/external/google/drive/uploadFileToDrive";
-
-const prisma = new PrismaClient();
+import { RDP02 } from "../../../interfaces/shared/RDP02Instancias";
+import { query } from "../../../../core/databases/connectors/postgres";
 
 /**
  * Sube una foto de perfil para cualquier actor del sistema
+ * @param rdp02EnUso Instancia de base de datos a utilizar
  * @param actorTipo Tipo de actor (puede ser RolesSistema o Estudiante)
  * @param file Archivo de imagen a subir
  * @param identificador Identificador único del actor
@@ -20,6 +20,7 @@ const prisma = new PrismaClient();
  * @returns Resultado de la operación de subida
  */
 export async function subirFotoPerfil(
+  rdp02EnUso: RDP02,
   actorTipo: RolesSistema | ActoresSistema.Estudiante,
   file: Express.Multer.File,
   identificador: string | number,
@@ -35,57 +36,73 @@ export async function subirFotoPerfil(
     // Configuración para cada tipo de actor
     const configuracion = {
       [RolesSistema.Directivo]: {
-        modelo: prisma.t_Directivos,
+        tabla: "T_Directivos",
         campo: "Id_Directivo",
+        campoDrive: "Google_Drive_Foto_ID",
+        campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Directivos",
         esNumerico: true,
         mensaje: "Directivo",
       },
       [RolesSistema.Auxiliar]: {
-        modelo: prisma.t_Auxiliares,
+        tabla: "T_Auxiliares",
         campo: "DNI_Auxiliar",
+        campoDrive: "Google_Drive_Foto_ID",
+        campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Auxiliares",
         esNumerico: false,
         mensaje: "Auxiliar",
       },
       [RolesSistema.ProfesorPrimaria]: {
-        modelo: prisma.t_Profesores_Primaria,
+        tabla: "T_Profesores_Primaria",
         campo: "DNI_Profesor_Primaria",
+        campoDrive: "Google_Drive_Foto_ID",
+        campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Profesores Primaria",
         esNumerico: false,
         mensaje: "Profesor de primaria",
       },
       [RolesSistema.ProfesorSecundaria]: {
-        modelo: prisma.t_Profesores_Secundaria,
+        tabla: "T_Profesores_Secundaria",
         campo: "DNI_Profesor_Secundaria",
+        campoDrive: "Google_Drive_Foto_ID",
+        campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Profesores Secundaria",
         esNumerico: false,
         mensaje: "Profesor de secundaria",
       },
       [RolesSistema.Tutor]: {
-        modelo: prisma.t_Profesores_Secundaria,
+        tabla: "T_Profesores_Secundaria",
         campo: "DNI_Profesor_Secundaria",
+        campoDrive: "Google_Drive_Foto_ID",
+        campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Profesores Secundaria",
         esNumerico: false,
         mensaje: "Tutor",
       },
       [RolesSistema.PersonalAdministrativo]: {
-        modelo: prisma.t_Personal_Administrativo,
+        tabla: "T_Personal_Administrativo",
         campo: "DNI_Personal_Administrativo",
+        campoDrive: "Google_Drive_Foto_ID",
+        campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Personal Administrativo",
         esNumerico: false,
         mensaje: "Personal administrativo",
       },
       [RolesSistema.Responsable]: {
-        modelo: prisma.t_Responsables,
+        tabla: "T_Responsables",
         campo: "DNI_Responsable",
+        campoDrive: "Google_Drive_Foto_ID",
+        campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Responsables",
         esNumerico: false,
         mensaje: "Responsable",
       },
       [ActoresSistema.Estudiante]: {
-        modelo: prisma.t_Estudiantes,
+        tabla: "T_Estudiantes",
         campo: "DNI_Estudiante",
+        campoDrive: "Google_Drive_Foto_ID",
+        campoUsuario: "",
         carpeta: "Fotos de Perfil/Estudiantes",
         esNumerico: false,
         mensaje: "Estudiante",
@@ -108,22 +125,36 @@ export async function subirFotoPerfil(
       ? Number(identificador)
       : String(identificador);
 
+    // Construir la consulta SQL
+    let campos = [config.campoDrive];
+    if (actorTipo !== ActoresSistema.Estudiante) {
+      campos.push(config.campoUsuario);
+    }
+    
+    const camposStr = campos.map(campo => `"${campo}"`).join(", ");
+    
     // Buscar al actor
-    const actor = await (config.modelo as any).findUnique({
-      where: { [config.campo]: idValor },
-      select: {
-        Google_Drive_Foto_ID: true,
-        Nombre_Usuario: actorTipo !== ActoresSistema.Estudiante,
-      },
-    });
-
-    if (!actor) {
+    const sql = `
+      SELECT ${camposStr}
+      FROM "${config.tabla}"
+      WHERE "${config.campo}" = $1
+    `;
+    
+    const result = await query(
+      rdp02EnUso,
+      sql,
+      [idValor]
+    );
+    
+    if (result.rows.length === 0) {
       return {
         success: false,
         message: `${config.mensaje} no encontrado`,
         errorType: UserErrorTypes.USER_NOT_FOUND,
       };
     }
+    
+    const actor = result.rows[0];
 
     // Determinar el nombre del archivo
     const extension = file.originalname.split(".").pop() || "png";
@@ -137,12 +168,12 @@ export async function subirFotoPerfil(
       archivoFinal = `estudiante_${idValor}.${extension}`;
     } else {
       // Para otros roles, usar el nombre de usuario
-      archivoFinal = `${actor.Nombre_Usuario}.${extension}`;
+      archivoFinal = `${actor[config.campoUsuario]}.${extension}`;
     }
 
     // Eliminar la foto anterior si existe
-    if (actor.Google_Drive_Foto_ID) {
-      await deleteFileFromDrive(actor.Google_Drive_Foto_ID);
+    if (actor[config.campoDrive]) {
+      await deleteFileFromDrive(actor[config.campoDrive]);
     }
 
     // Subir la nueva foto
@@ -152,13 +183,26 @@ export async function subirFotoPerfil(
       archivoFinal
     );
 
-    // Actualizar el registro en la base de datos
-    await (config.modelo as any).update({
-      where: { [config.campo]: idValor },
-      data: {
-        Google_Drive_Foto_ID: resultadoSubida.id,
-      },
-    });
+    // Actualizar el registro en la base de datos usando SQL
+    const updateSql = `
+      UPDATE "${config.tabla}"
+      SET "${config.campoDrive}" = $1
+      WHERE "${config.campo}" = $2
+    `;
+    
+    const updateResult = await query(
+      rdp02EnUso,
+      updateSql,
+      [resultadoSubida.id, idValor]
+    );
+    
+    if (updateResult.rowCount === 0) {
+      return {
+        success: false,
+        message: `Error al actualizar la foto del ${config.mensaje.toLowerCase()}`,
+        errorType: SystemErrorTypes.DATABASE_ERROR,
+      };
+    }
 
     // Devolver resultado exitoso
     return {

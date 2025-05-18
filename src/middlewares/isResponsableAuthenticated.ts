@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { RolesSistema } from "../interfaces/shared/RolesSistema";
-import { PrismaClient } from "@prisma/client";
 import { verificarBloqueoRol } from "../lib/helpers/verificators/verificarBloqueoRol";
 import {
   JWTPayload,
@@ -13,8 +12,10 @@ import {
   TokenErrorTypes,
   UserErrorTypes,
 } from "../interfaces/shared/apis/errors";
-
-const prisma = new PrismaClient();
+import {
+  buscarResponsablePorDNI,
+  verificarEstudiantesActivosResponsable,
+} from "../../core/databases/queries/RDP02/responsables/buscarResponsablePorDNI";
 
 // Middleware para verificar si el usuario es un Responsable (Padre/Apoderado)
 const isResponsableAuthenticated = async (
@@ -108,11 +109,10 @@ const isResponsableAuthenticated = async (
         }
 
         // Verificar si el responsable existe
-        const responsable = await prisma.t_Responsables.findUnique({
-          where: {
-            DNI_Responsable: decodedPayload.ID_Usuario,
-          },
-        });
+        // Reemplazo de la llamada a Prisma por la función desacoplada
+        const responsable = await buscarResponsablePorDNI(
+          decodedPayload.ID_Usuario
+        );
 
         if (!responsable) {
           req.authError = {
@@ -123,16 +123,13 @@ const isResponsableAuthenticated = async (
         }
 
         // Verificar si tiene al menos un estudiante relacionado activo
-        const relacionesActivas = await prisma.t_Relaciones_E_R.findFirst({
-          where: {
-            DNI_Responsable: decodedPayload.ID_Usuario,
-            estudiante: {
-              Estado: true,
-            },
-          },
-        });
+        // Reemplazo de la llamada a Prisma por la función desacoplada
+        const tieneEstudiantesActivos =
+          await verificarEstudiantesActivosResponsable(
+            decodedPayload.ID_Usuario
+          );
 
-        if (!relacionesActivas) {
+        if (!tieneEstudiantesActivos) {
           req.authError = {
             type: UserErrorTypes.USER_INACTIVE,
             message: "No tiene estudiantes activos asociados a su cuenta",
@@ -157,7 +154,8 @@ const isResponsableAuthenticated = async (
       // Marcar como autenticado para que los siguientes middlewares no reprocesen
       req.isAuthenticated = true;
       req.userRole = RolesSistema.Responsable;
-
+      req.RDP02_INSTANCE = decodedPayload.RDP02_INSTANCE;
+      
       // Si todo está bien, continuar
       next();
     } catch (jwtError: any) {

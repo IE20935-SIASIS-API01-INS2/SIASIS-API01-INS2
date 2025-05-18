@@ -1,5 +1,4 @@
 import { Request, Response, Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
 
 import { RolesSistema } from "../../../../interfaces/shared/RolesSistema";
@@ -37,13 +36,23 @@ import {
   CambiarContraseñaRequestBody,
   CambiarContraseñaSuccessResponse,
 } from "../../../../interfaces/shared/apis/shared/mis-datos/mi-contraseña/types";
+import { buscarContraseñaDirectivo } from "../../../../../core/databases/queries/RDP02/directivos/buscarContraseñaDirectivo";
+import { buscarContraseñaPersonalAdministrativo } from "../../../../../core/databases/queries/RDP02/personal-administrativo/buscarContraseñaPersonalAdministrativo";
+import { buscarContraseñaAuxiliar } from "../../../../../core/databases/queries/RDP02/auxiliares/buscarContraseñaAuxiliar";
+import { buscarContraseñaProfesorPrimaria } from "../../../../../core/databases/queries/RDP02/profesor-primaria/buscarContraseñaProfesorPrimaria";
+import { buscarContraseñaProfesorSecundaria } from "../../../../../core/databases/queries/RDP02/profesor-secundaria/buscarContraseñaProfesorSecundaria";
+import { actualizarContraseñaAuxiliar } from "../../../../../core/databases/queries/RDP02/auxiliares/actualizarContraseñaAuxiliar";
+import { actualizarContraseñaDirectivo } from "../../../../../core/databases/queries/RDP02/directivos/actualizarContraseñaDirectivo";
+import { actualizarContraseñaProfesorPrimaria } from "../../../../../core/databases/queries/RDP02/profesor-primaria/actualizarContraseñaProfesorPrimaria";
+import { actualizarContraseñaProfesorSecundaria } from "../../../../../core/databases/queries/RDP02/profesor-secundaria/actualizarContraseñaProfesorSecundaria";
+import { actualizarContraseñaPersonalAdministrativo } from "../../../../../core/databases/queries/RDP02/personal-administrativo/actualizarContraseñaPersonalAdministrativo";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.put("/", (async (req: Request, res: Response) => {
   try {
     const Rol = req.userRole!;
+    const rdp02EnUso = req.RDP02_INSTANCE!;
     const userData = req.user!;
     const { contraseñaActual, nuevaContraseña } =
       req.body as CambiarContraseñaRequestBody;
@@ -93,20 +102,17 @@ router.put("/", (async (req: Request, res: Response) => {
 
     let contraseñaActualValida = false;
     let contraseñaEncriptada = "";
+    let contraseñaAlmacenada: string | null = null;
 
-    // Verificar la contraseña actual y generar la nueva contraseña encriptada según el rol
+    // Obtener la contraseña actual según el rol
     switch (Rol) {
       case RolesSistema.Directivo: {
-        const directivo = await prisma.t_Directivos.findUnique({
-          where: {
-            Id_Directivo: (userData as DirectivoAuthenticated).Id_Directivo,
-          },
-          select: {
-            Contraseña: true,
-          },
-        });
+        contraseñaAlmacenada = await buscarContraseñaDirectivo(
+          (userData as DirectivoAuthenticated).Id_Directivo,
+          rdp02EnUso
+        );
 
-        if (!directivo) {
+        if (!contraseñaAlmacenada) {
           return res.status(404).json({
             success: false,
             message: "Directivo no encontrado",
@@ -116,7 +122,7 @@ router.put("/", (async (req: Request, res: Response) => {
 
         contraseñaActualValida = verifyDirectivoPassword(
           contraseñaActual,
-          directivo.Contraseña
+          contraseñaAlmacenada
         );
         if (contraseñaActualValida) {
           contraseñaEncriptada = encryptDirectivoPassword(nuevaContraseña);
@@ -125,16 +131,12 @@ router.put("/", (async (req: Request, res: Response) => {
       }
 
       case RolesSistema.Auxiliar: {
-        const auxiliar = await prisma.t_Auxiliares.findUnique({
-          where: {
-            DNI_Auxiliar: (userData as AuxiliarAuthenticated).DNI_Auxiliar,
-          },
-          select: {
-            Contraseña: true,
-          },
-        });
+        contraseñaAlmacenada = await buscarContraseñaAuxiliar(
+          (userData as AuxiliarAuthenticated).DNI_Auxiliar,
+          rdp02EnUso
+        );
 
-        if (!auxiliar) {
+        if (!contraseñaAlmacenada) {
           return res.status(404).json({
             success: false,
             message: "Auxiliar no encontrado",
@@ -144,7 +146,7 @@ router.put("/", (async (req: Request, res: Response) => {
 
         contraseñaActualValida = verifyAuxiliarPassword(
           contraseñaActual,
-          auxiliar.Contraseña
+          contraseñaAlmacenada
         );
         if (contraseñaActualValida) {
           contraseñaEncriptada = encryptAuxiliarPassword(nuevaContraseña);
@@ -153,17 +155,12 @@ router.put("/", (async (req: Request, res: Response) => {
       }
 
       case RolesSistema.ProfesorPrimaria: {
-        const profesor = await prisma.t_Profesores_Primaria.findUnique({
-          where: {
-            DNI_Profesor_Primaria: (userData as ProfesorPrimariaAuthenticated)
-              .DNI_Profesor_Primaria,
-          },
-          select: {
-            Contraseña: true,
-          },
-        });
+        contraseñaAlmacenada = await buscarContraseñaProfesorPrimaria(
+          (userData as ProfesorPrimariaAuthenticated).DNI_Profesor_Primaria,
+          rdp02EnUso
+        );
 
-        if (!profesor) {
+        if (!contraseñaAlmacenada) {
           return res.status(404).json({
             success: false,
             message: "Profesor de primaria no encontrado",
@@ -173,7 +170,7 @@ router.put("/", (async (req: Request, res: Response) => {
 
         contraseñaActualValida = verifyDirectivoPassword(
           contraseñaActual,
-          profesor.Contraseña
+          contraseñaAlmacenada
         );
         if (contraseñaActualValida) {
           contraseñaEncriptada = encryptDirectivoPassword(nuevaContraseña);
@@ -183,18 +180,13 @@ router.put("/", (async (req: Request, res: Response) => {
 
       case RolesSistema.ProfesorSecundaria:
       case RolesSistema.Tutor: {
-        const profesor = await prisma.t_Profesores_Secundaria.findUnique({
-          where: {
-            DNI_Profesor_Secundaria: (
-              userData as ProfesorTutorSecundariaAuthenticated
-            ).DNI_Profesor_Secundaria,
-          },
-          select: {
-            Contraseña: true,
-          },
-        });
+        contraseñaAlmacenada = await buscarContraseñaProfesorSecundaria(
+          (userData as ProfesorTutorSecundariaAuthenticated)
+            .DNI_Profesor_Secundaria,
+          rdp02EnUso
+        );
 
-        if (!profesor) {
+        if (!contraseñaAlmacenada) {
           return res.status(404).json({
             success: false,
             message: `${
@@ -206,7 +198,7 @@ router.put("/", (async (req: Request, res: Response) => {
 
         contraseñaActualValida = verifyDirectivoPassword(
           contraseñaActual,
-          profesor.Contraseña
+          contraseñaAlmacenada
         );
         if (contraseñaActualValida) {
           contraseñaEncriptada = encryptDirectivoPassword(nuevaContraseña);
@@ -215,18 +207,13 @@ router.put("/", (async (req: Request, res: Response) => {
       }
 
       case RolesSistema.PersonalAdministrativo: {
-        const personal = await prisma.t_Personal_Administrativo.findUnique({
-          where: {
-            DNI_Personal_Administrativo: (
-              userData as PersonalAdministrativoAuthenticated
-            ).DNI_Personal_Administrativo,
-          },
-          select: {
-            Contraseña: true,
-          },
-        });
+        contraseñaAlmacenada = await buscarContraseñaPersonalAdministrativo(
+          (userData as PersonalAdministrativoAuthenticated)
+            .DNI_Personal_Administrativo,
+          rdp02EnUso
+        );
 
-        if (!personal) {
+        if (!contraseñaAlmacenada) {
           return res.status(404).json({
             success: false,
             message: "Personal administrativo no encontrado",
@@ -236,7 +223,7 @@ router.put("/", (async (req: Request, res: Response) => {
 
         contraseñaActualValida = verifyDirectivoPassword(
           contraseñaActual,
-          personal.Contraseña
+          contraseñaAlmacenada
         );
         if (contraseñaActualValida) {
           contraseñaEncriptada = encryptDirectivoPassword(nuevaContraseña);
@@ -246,16 +233,12 @@ router.put("/", (async (req: Request, res: Response) => {
 
       /* 
         case RolesSistema.Responsable: {
-          const responsable = await prisma.t_Responsables.findUnique({
-            where: {
-              DNI_Responsable: (userData as ResponsableAuthenticated).DNI_Responsable,
-            },
-            select: {
-              Contraseña: true,
-            },
-          });
+          contraseñaAlmacenada = await buscarContraseñaResponsable(
+            (userData as ResponsableAuthenticated).DNI_Responsable,
+            rdp02EnUso
+          );
 
-          if (!responsable) {
+          if (!contraseñaAlmacenada) {
             return res.status(404).json({
               success: false,
               message: "Responsable no encontrado",
@@ -263,7 +246,10 @@ router.put("/", (async (req: Request, res: Response) => {
             } as ErrorResponseAPIBase);
           }
 
-          contraseñaActualValida = verifyDirectivoPassword(contraseñaActual, responsable.Contraseña);
+          contraseñaActualValida = verifyDirectivoPassword(
+            contraseñaActual,
+            contraseñaAlmacenada
+          );
           if (contraseñaActualValida) {
             contraseñaEncriptada = encryptDirectivoPassword(nuevaContraseña);
           }
@@ -289,80 +275,69 @@ router.put("/", (async (req: Request, res: Response) => {
     }
 
     // Actualizar la contraseña en la base de datos según el rol
+    let actualizacionExitosa = false;
+
     switch (Rol) {
       case RolesSistema.Directivo:
-        await prisma.t_Directivos.update({
-          where: {
-            Id_Directivo: (userData as DirectivoAuthenticated).Id_Directivo,
-          },
-          data: {
-            Contraseña: contraseñaEncriptada,
-          },
-        });
+        actualizacionExitosa = await actualizarContraseñaDirectivo(
+          (userData as DirectivoAuthenticated).Id_Directivo,
+          contraseñaEncriptada,
+          rdp02EnUso
+        );
         break;
 
       case RolesSistema.Auxiliar:
-        await prisma.t_Auxiliares.update({
-          where: {
-            DNI_Auxiliar: (userData as AuxiliarAuthenticated).DNI_Auxiliar,
-          },
-          data: {
-            Contraseña: contraseñaEncriptada,
-          },
-        });
+        actualizacionExitosa = await actualizarContraseñaAuxiliar(
+          (userData as AuxiliarAuthenticated).DNI_Auxiliar,
+          contraseñaEncriptada,
+          rdp02EnUso
+        );
         break;
 
       case RolesSistema.ProfesorPrimaria:
-        await prisma.t_Profesores_Primaria.update({
-          where: {
-            DNI_Profesor_Primaria: (userData as ProfesorPrimariaAuthenticated)
-              .DNI_Profesor_Primaria,
-          },
-          data: {
-            Contraseña: contraseñaEncriptada,
-          },
-        });
+        actualizacionExitosa = await actualizarContraseñaProfesorPrimaria(
+          (userData as ProfesorPrimariaAuthenticated).DNI_Profesor_Primaria,
+          contraseñaEncriptada,
+          rdp02EnUso
+        );
         break;
 
       case RolesSistema.ProfesorSecundaria:
       case RolesSistema.Tutor:
-        await prisma.t_Profesores_Secundaria.update({
-          where: {
-            DNI_Profesor_Secundaria: (
-              userData as ProfesorTutorSecundariaAuthenticated
-            ).DNI_Profesor_Secundaria,
-          },
-          data: {
-            Contraseña: contraseñaEncriptada,
-          },
-        });
+        actualizacionExitosa = await actualizarContraseñaProfesorSecundaria(
+          (userData as ProfesorTutorSecundariaAuthenticated)
+            .DNI_Profesor_Secundaria,
+          contraseñaEncriptada,
+          rdp02EnUso
+        );
         break;
 
       case RolesSistema.PersonalAdministrativo:
-        await prisma.t_Personal_Administrativo.update({
-          where: {
-            DNI_Personal_Administrativo: (
-              userData as PersonalAdministrativoAuthenticated
-            ).DNI_Personal_Administrativo,
-          },
-          data: {
-            Contraseña: contraseñaEncriptada,
-          },
-        });
+        actualizacionExitosa = await actualizarContraseñaPersonalAdministrativo(
+          (userData as PersonalAdministrativoAuthenticated)
+            .DNI_Personal_Administrativo,
+          contraseñaEncriptada,
+          rdp02EnUso
+        );
         break;
 
       /* 
         case RolesSistema.Responsable:
-          await prisma.t_Responsables.update({
-            where: {
-              DNI_Responsable: (userData as ResponsableAuthenticated).DNI_Responsable,
-            },
-            data: {
-              Contraseña: contraseñaEncriptada,
-            },
-          });
+          actualizacionExitosa = await actualizarContraseñaResponsable(
+            (userData as ResponsableAuthenticated).DNI_Responsable,
+            contraseñaEncriptada,
+            rdp02EnUso
+          );
           break;
         */
+    }
+
+    if (!actualizacionExitosa) {
+      return res.status(500).json({
+        success: false,
+        message: "Error al actualizar la contraseña",
+        errorType: SystemErrorTypes.DATABASE_ERROR,
+      } as ErrorResponseAPIBase);
     }
 
     return res.status(200).json({

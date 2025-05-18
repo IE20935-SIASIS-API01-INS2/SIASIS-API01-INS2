@@ -1,5 +1,4 @@
 import { Request, Response, Router } from "express";
-import { PrismaClient } from "@prisma/client";
 
 import { RolesSistema } from "../../../interfaces/shared/RolesSistema";
 import {
@@ -34,7 +33,6 @@ import { validatePhone } from "../../../lib/helpers/validators/data/validateCelu
 import { ValidatorConfig } from "../../../lib/helpers/validators/data/types";
 import { validateEmail } from "../../../lib/helpers/validators/data/validateCorreo";
 import { validateData } from "../../../lib/helpers/validators/data/validateData";
-import { handlePrismaError } from "../../../lib/helpers/handlers/errors/prisma";
 import { ErrorResponseAPIBase } from "../../../interfaces/shared/apis/types";
 import miContraseñaRouter from "./mi-contrasena";
 import miFotoDePerfilRouter from "./mi-foto-perfil";
@@ -47,14 +45,29 @@ import {
   UserErrorTypes,
 } from "../../../interfaces/shared/apis/errors";
 
+// Importar funciones de consulta a la base de datos
+import { buscarDirectivoPorIdSelect } from "../../../../core/databases/queries/RDP02/directivos/buscarDirectivoPorId";
+import { buscarAuxiliarPorDNISelect } from "../../../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorDNI";
+import { buscarProfesorSecundariaPorDNISelect } from "../../../../core/databases/queries/RDP02/profesor-secundaria/buscarProfesorSecundariaPorDNI";
+
+import { buscarPersonalAdministrativoPorDNISelect } from "../../../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorDNI";
+import { actualizarseAuxiliar } from "../../../../core/databases/queries/RDP02/auxiliares/actualizarseAuxiliar";
+import { actualizarseProfesorSecundaria } from "../../../../core/databases/queries/RDP02/profesor-secundaria/actualizarseProfesorSecundaria";
+import { actualizarseProfesorPrimaria } from "../../../../core/databases/queries/RDP02/profesor-primaria/actualizarseProfesorPrimaria";
+import { actualizarsePersonalAdministrativo } from "../../../../core/databases/queries/RDP02/personal-administrativo/actualizarsePersonalAdministrativo";
+import { handleSQLError } from "../../../lib/helpers/handlers/errors/postgreSQL";
+import { buscarProfesorPrimariaPorDNIConAula } from "../../../../core/databases/queries/RDP02/profesor-primaria/buscarProfesorPrimariaPorDNIConAula";
+import { buscarTutorPorDNIConAula } from "../../../../core/databases/queries/RDP02/profesor-secundaria/buscarTutorPorDNIConAula";
+import { actualizarseDirectivo } from "../../../../core/databases/queries/RDP02/directivos/actualizarseDirectivo";
+
 const router = Router();
-const prisma = new PrismaClient();
 
 // Ruta para obtener los datos personales del usuario por rol | Menos Responsable
 router.get("/", (async (req: Request, res: Response) => {
   try {
-    const Rol  = req.userRole!;
+    const Rol = req.userRole!;
     const userData = req.user!;
+    const rdp02EnUso = req.RDP02_INSTANCE!;
 
     // Buscar el usuario correspondiente según el rol
     let user: ObtenerMisDatosSuccessAPI01Data | null = null;
@@ -73,70 +86,46 @@ router.get("/", (async (req: Request, res: Response) => {
 
     switch (Rol) {
       case RolesSistema.Directivo:
-        user = (await prisma.t_Directivos.findUnique({
-          where: {
-            Id_Directivo: (userData as DirectivoAuthenticated).Id_Directivo,
-          },
-          select: {
-            Id_Directivo: true,
-            Nombres: true,
-            Apellidos: true,
-            Genero: true,
-            DNI: true,
-            Nombre_Usuario: true,
-            Correo_Electronico: true,
-            Celular: true,
-            Google_Drive_Foto_ID: true,
-          },
-        })) as MisDatosDirectivo;
+        user = (await buscarDirectivoPorIdSelect(
+          (userData as DirectivoAuthenticated).Id_Directivo,
+          [
+            "Id_Directivo",
+            "Nombres",
+            "Apellidos",
+            "Genero",
+            "DNI",
+            "Nombre_Usuario",
+            "Correo_Electronico",
+            "Celular",
+            "Google_Drive_Foto_ID",
+          ],
+          rdp02EnUso
+        )) as MisDatosDirectivo;
         break;
 
       case RolesSistema.Auxiliar:
-        user = (await prisma.t_Auxiliares.findUnique({
-          where: {
-            DNI_Auxiliar: (userData as AuxiliarAuthenticated).DNI_Auxiliar,
-          },
-          select: {
-            DNI_Auxiliar: true,
-            Nombres: true,
-            Apellidos: true,
-            Genero: true,
-            Nombre_Usuario: true,
-            Estado: true,
-            Correo_Electronico: true,
-            Celular: true,
-            Google_Drive_Foto_ID: true,
-          },
-        })) as MisDatosAuxiliar;
+        user = (await buscarAuxiliarPorDNISelect(
+          (userData as AuxiliarAuthenticated).DNI_Auxiliar,
+          [
+            "DNI_Auxiliar",
+            "Nombres",
+            "Apellidos",
+            "Genero",
+            "Nombre_Usuario",
+            "Estado",
+            "Correo_Electronico",
+            "Celular",
+            "Google_Drive_Foto_ID",
+          ],
+          rdp02EnUso
+        )) as MisDatosAuxiliar;
         break;
 
       case RolesSistema.ProfesorPrimaria:
-        const profesorPrimaria = await prisma.t_Profesores_Primaria.findUnique({
-          where: {
-            DNI_Profesor_Primaria: (userData as ProfesorPrimariaAuthenticated)
-              .DNI_Profesor_Primaria,
-          },
-          select: {
-            DNI_Profesor_Primaria: true,
-            Nombres: true,
-            Apellidos: true,
-            Genero: true,
-            Nombre_Usuario: true,
-            Estado: true,
-            Correo_Electronico: true,
-            Celular: true,
-            Google_Drive_Foto_ID: true,
-            aulas: {
-              select: {
-                Id_Aula: true,
-                Nivel: true,
-                Grado: true,
-                Seccion: true,
-                Color: true,
-              },
-            },
-          },
-        });
+        const profesorPrimaria = await buscarProfesorPrimariaPorDNIConAula(
+          (userData as ProfesorPrimariaAuthenticated).DNI_Profesor_Primaria,
+          rdp02EnUso
+        );
 
         // Modificar la estructura para tener una propiedad Aula simple
         if (profesorPrimaria) {
@@ -154,107 +143,84 @@ router.get("/", (async (req: Request, res: Response) => {
         break;
 
       case RolesSistema.ProfesorSecundaria:
-        user = (await prisma.t_Profesores_Secundaria.findUnique({
-          where: {
-            DNI_Profesor_Secundaria: (
-              userData as ProfesorTutorSecundariaAuthenticated
-            ).DNI_Profesor_Secundaria,
-          },
-          select: {
-            DNI_Profesor_Secundaria: true,
-            Nombres: true,
-            Apellidos: true,
-            Genero: true,
-            Nombre_Usuario: true,
-            Estado: true,
-            Correo_Electronico: true,
-            Celular: true,
-            Google_Drive_Foto_ID: true,
-          },
-        })) as MisDatosProfesorSecundaria;
+        user = (await buscarProfesorSecundariaPorDNISelect(
+          (userData as ProfesorTutorSecundariaAuthenticated)
+            .DNI_Profesor_Secundaria,
+          [
+            "DNI_Profesor_Secundaria",
+            "Nombres",
+            "Apellidos",
+            "Genero",
+            "Nombre_Usuario",
+            "Estado",
+            "Correo_Electronico",
+            "Celular",
+            "Google_Drive_Foto_ID",
+          ],
+          rdp02EnUso
+        )) as MisDatosProfesorSecundaria;
         break;
 
       case RolesSistema.Tutor:
-        const tutor = await prisma.t_Profesores_Secundaria.findUnique({
-          where: {
-            DNI_Profesor_Secundaria: (
-              userData as ProfesorTutorSecundariaAuthenticated
-            ).DNI_Profesor_Secundaria,
-          },
-          select: {
-            DNI_Profesor_Secundaria: true,
-            Nombres: true,
-            Apellidos: true,
-            Genero: true,
-            Nombre_Usuario: true,
-            Estado: true,
-            Correo_Electronico: true,
-            Celular: true,
-            Google_Drive_Foto_ID: true,
-            aulas: {
-              select: {
-                Id_Aula: true,
-                Nivel: true,
-                Grado: true,
-                Seccion: true,
-                Color: true,
-              },
-            },
-          },
-        });
+        // Use the tutorPorDNI function that returns the data with the aula property
+        const tutorData = await buscarTutorPorDNIConAula(
+          (userData as ProfesorTutorSecundariaAuthenticated)
+            .DNI_Profesor_Secundaria,
+          rdp02EnUso
+        );
 
-        // Modificar la estructura para tener una propiedad Aula simple
-        if (tutor) {
-          // Asumiendo que solo tienen un aula asignada
-          const aula =
-            tutor.aulas && tutor.aulas.length > 0 ? tutor.aulas[0] : null;
+        // Only proceed if tutor data was found
+        if (tutorData) {
+          // Check if the tutor has an aula property and it's not null
+          if (!tutorData.aula) {
+            // If no aula is found, this person isn't actually a tutor
+            return res.status(400).json({
+              success: false,
+              message: "El usuario no tiene un aula asignada como tutor",
+              errorType: UserErrorTypes.USER_ROLE_MISMATCH,
+            });
+          }
+
+          // Restructure the data to match the expected format
           user = {
-            ...tutor,
-            Aula: aula!,
+            DNI_Profesor_Secundaria: tutorData.DNI_Profesor_Secundaria,
+            Nombres: tutorData.Nombres,
+            Apellidos: tutorData.Apellidos,
+            Genero: tutorData.Genero,
+            Nombre_Usuario: tutorData.Nombre_Usuario,
+            Estado: tutorData.Estado,
+            Correo_Electronico: tutorData.Correo_Electronico,
+            Celular: tutorData.Celular,
+            Google_Drive_Foto_ID: tutorData.Google_Drive_Foto_ID,
+            Aula: {
+              Id_Aula: tutorData.aula.Id_Aula,
+              Nivel: tutorData.aula.Nivel,
+              Grado: tutorData.aula.Grado,
+              Seccion: tutorData.aula.Seccion,
+              Color: tutorData.aula.Color,
+            },
           } as MisDatosTutor;
         }
         break;
-
-      // case RolesSistema.Responsable:
-      //   user = await prisma.t_Responsables.findUnique({
-      //     where: {
-      //       DNI_Responsable: (userData as ResponsableAuthenticated)
-      //         .DNI_Responsable,
-      //     },
-      //     select: {
-      //       DNI_Responsable: true,
-      //       Nombres: true,
-      //       Apellidos: true,
-      //       Nombre_Usuario: true,
-      //       Celular: true,
-      //       Google_Drive_Foto_ID: true,
-      //     },
-      //   });
-      //   break;
-
       case RolesSistema.PersonalAdministrativo:
-        user = (await prisma.t_Personal_Administrativo.findUnique({
-          where: {
-            DNI_Personal_Administrativo: (
-              userData as PersonalAdministrativoAuthenticated
-            ).DNI_Personal_Administrativo,
-          },
-          select: {
-            DNI_Personal_Administrativo: true,
-            Nombres: true,
-            Apellidos: true,
-            Genero: true,
-            Nombre_Usuario: true,
-            Estado: true,
-            Celular: true,
-            Google_Drive_Foto_ID: true,
-            // Incluir horarios laborales para personal administrativo
-            Horario_Laboral_Entrada: true,
-            Horario_Laboral_Salida: true,
-            Cargo: true,
-          },
-        })) as MisDatosPersonalAdministrativo;
-
+        user = (await buscarPersonalAdministrativoPorDNISelect(
+          (userData as PersonalAdministrativoAuthenticated)
+            .DNI_Personal_Administrativo,
+          [
+            "DNI_Personal_Administrativo",
+            "Nombres",
+            "Apellidos",
+            "Genero",
+            "Nombre_Usuario",
+            "Estado",
+            "Celular",
+            "Google_Drive_Foto_ID",
+            "Horario_Laboral_Entrada",
+            "Horario_Laboral_Salida",
+            "Cargo",
+          ],
+          rdp02EnUso
+        )) as MisDatosPersonalAdministrativo;
         break;
 
       default:
@@ -273,7 +239,7 @@ router.get("/", (async (req: Request, res: Response) => {
       });
     }
 
-    //Eliminamos Propiedades innecesarias
+    // Eliminamos Propiedades innecesarias
     delete (user as any).aulas;
 
     return res.status(200).json({
@@ -294,9 +260,10 @@ router.get("/", (async (req: Request, res: Response) => {
 // Ruta para actualizar parcialmente los datos personales del usuario por rol | Menos Responsable
 router.put("/", (async (req: Request, res: Response) => {
   try {
-    const Rol  = req.userRole!;
+    const Rol = req.userRole!;
     const userData = req.user!;
     const updateData = req.body;
+    const rdp02EnUso = req.RDP02_INSTANCE!;
 
     // Verificar que el rol del token coincide con el rol solicitado
     if (req.userRole !== Rol) {
@@ -358,14 +325,6 @@ router.put("/", (async (req: Request, res: Response) => {
         validators = [{ field: "Celular", validator: validatePhone }];
         break;
 
-      /* 
-        case RolesSistema.Responsable:
-          validators = [
-            { field: 'Celular', validator: validatePhone }
-          ];
-          break;
-        */
-
       default:
         return res.status(400).json({
           success: false,
@@ -404,68 +363,59 @@ router.put("/", (async (req: Request, res: Response) => {
     }
 
     // Ahora que los datos están validados, podemos proceder con la actualización
+    let updated = false;
+
     switch (Rol) {
       case RolesSistema.Directivo:
-        await prisma.t_Directivos.update({
-          where: {
-            Id_Directivo: (userData as DirectivoAuthenticated).Id_Directivo,
-          },
-          data: updatedFields,
-        });
+        updated = await actualizarseDirectivo(
+          (userData as DirectivoAuthenticated).Id_Directivo,
+          updatedFields,
+          rdp02EnUso
+        );
         break;
 
       case RolesSistema.Auxiliar:
-        await prisma.t_Auxiliares.update({
-          where: {
-            DNI_Auxiliar: (userData as AuxiliarAuthenticated).DNI_Auxiliar,
-          },
-          data: updatedFields,
-        });
+        updated = await actualizarseAuxiliar(
+          (userData as AuxiliarAuthenticated).DNI_Auxiliar,
+          updatedFields,
+          rdp02EnUso
+        );
         break;
 
       case RolesSistema.ProfesorPrimaria:
-        await prisma.t_Profesores_Primaria.update({
-          where: {
-            DNI_Profesor_Primaria: (userData as ProfesorPrimariaAuthenticated)
-              .DNI_Profesor_Primaria,
-          },
-          data: updatedFields,
-        });
+        updated = await actualizarseProfesorPrimaria(
+          (userData as ProfesorPrimariaAuthenticated).DNI_Profesor_Primaria,
+          updatedFields,
+          rdp02EnUso
+        );
         break;
 
       case RolesSistema.ProfesorSecundaria:
       case RolesSistema.Tutor:
-        await prisma.t_Profesores_Secundaria.update({
-          where: {
-            DNI_Profesor_Secundaria: (
-              userData as ProfesorTutorSecundariaAuthenticated
-            ).DNI_Profesor_Secundaria,
-          },
-          data: updatedFields,
-        });
+        updated = await actualizarseProfesorSecundaria(
+          (userData as ProfesorTutorSecundariaAuthenticated)
+            .DNI_Profesor_Secundaria,
+          updatedFields,
+          rdp02EnUso
+        );
         break;
-
-      /* 
-        case RolesSistema.Responsable:
-          await prisma.t_Responsables.update({
-            where: {
-              DNI_Responsable: (userData as ResponsableAuthenticated).DNI_Responsable,
-            },
-            data: updatedFields,
-          });
-          break;
-        */
 
       case RolesSistema.PersonalAdministrativo:
-        await prisma.t_Personal_Administrativo.update({
-          where: {
-            DNI_Personal_Administrativo: (
-              userData as PersonalAdministrativoAuthenticated
-            ).DNI_Personal_Administrativo,
-          },
-          data: updatedFields,
-        });
+        updated = await actualizarsePersonalAdministrativo(
+          (userData as PersonalAdministrativoAuthenticated)
+            .DNI_Personal_Administrativo,
+          updatedFields,
+          rdp02EnUso
+        );
         break;
+    }
+
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado o no se pudo actualizar",
+        errorType: UserErrorTypes.USER_NOT_FOUND,
+      });
     }
 
     return res.status(200).json({
@@ -476,8 +426,8 @@ router.put("/", (async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error al actualizar datos del usuario:", error);
 
-    // Intentar manejar el error con la función específica para errores de Prisma
-    const handledError = handlePrismaError(error, {
+    // Intentar manejar el error con la función específica para errores SQL
+    const handledError = handleSQLError(error, {
       DNI: "DNI",
       Correo_Electronico: "correo electrónico",
       DNI_Auxiliar: "DNI",

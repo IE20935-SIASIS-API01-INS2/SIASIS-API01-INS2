@@ -1,4 +1,4 @@
-import { ValidationErrorTypes } from "../../../../interfaces/shared/apis/errors/ValidationErrorTyoes";
+import { ValidationErrorTypes } from "../../../../interfaces/shared/apis/errors";
 
 /**
  * Tipo para los resultados de validación

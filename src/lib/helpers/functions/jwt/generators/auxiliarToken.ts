@@ -3,6 +3,9 @@ import jwt from "jsonwebtoken";
 import { RolesSistema } from "../../../../../interfaces/shared/RolesSistema";
 import { AUXILIARES_SESSION_EXPIRATION } from "../../../../../constants/expirations";
 import { JWTPayload } from "../../../../../interfaces/shared/JWTPayload";
+import { RDP02 } from "../../../../../interfaces/shared/RDP02Instancias";
+import { RDP03 } from "../../../../../interfaces/shared/RDP03Instancias";
+import { getRandomElementFromEnum } from "../../../getRandomElementFromEnum";
 
 // Función para generar un token JWT para Auxiliares
 export function generateAuxiliarToken(
@@ -13,6 +16,8 @@ export function generateAuxiliarToken(
 
   const payload: JWTPayload = {
     ID_Usuario: dniAuxiliar,
+    RDP02_INSTANCE: getRandomElementFromEnum<RDP02>(RDP02),
+    RDP03_INSTANCE: getRandomElementFromEnum<RDP03>(RDP03),
     Nombre_Usuario: nombre_usuario,
     Rol: RolesSistema.Auxiliar,
     iat: Math.floor(Date.now() / 1000),

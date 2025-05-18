@@ -1,6 +1,5 @@
 import { EMCS01Payload } from "../../../../src/interfaces/shared/EMCS01/EMCS01Payload";
 import { RDP02 } from "../../../../src/interfaces/shared/RDP02Instancias";
-import { getGithubActionsInstallationToken } from "./getInstallationToken";
 
 // Constantes para el webhook de GitHub
 const GITHUB_WEBHOOK_REPO_OWNER =
@@ -30,7 +29,7 @@ export async function consultarConEMCS01(
 
   try {
     // Obtener token de instalación para la autenticación
-    const token = await getGithubActionsInstallationToken();
+    // const token = await getGithubActionsInstallationToken();
 
     // Crear la carga útil del webhook
     const payload: EMCS01Payload = {
@@ -48,7 +47,7 @@ export async function consultarConEMCS01(
       method: "POST",
       headers: {
         Accept: "application/vnd.github.v3+json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${process.env.EMCS01_GITHUB_STATIC_PERSONAL_ACCESS_TOKEN!}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),

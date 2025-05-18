@@ -27,6 +27,7 @@ export enum UserErrorTypes {
   USER_NOT_FOUND = "USER_NOT_FOUND", // Usuario no encontrado
   USER_INACTIVE = "USER_INACTIVE", // El usuario está inactivo
   INVALID_CREDENTIALS = "INVALID_CREDENTIALS",
+  USER_ROLE_MISMATCH = "USER_ROLE_MISMATCH",
 }
 
 /**
@@ -60,6 +61,8 @@ export enum ValidationErrorTypes {
   FIELD_REQUIRED = "FIELD_REQUIRED",
   INVALID_FORMAT = "INVALID_FORMAT",
   REQUIRED_FIELDS = "REQUIRED_FIELDS",
+  INVALID_REFERENCE = "INVALID_REFERENCE",
+  VALUE_ALREADY_EXISTS = "VALUE_ALREADY_EXISTS",
 }
 
 export enum DataConflictErrorTypes {

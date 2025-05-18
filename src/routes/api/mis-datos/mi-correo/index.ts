@@ -1,5 +1,4 @@
 import { Request, Response, Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import {
   ErrorResponseAPIBase,
   SuccessResponseAPIBase,
@@ -18,7 +17,6 @@ import {
   DirectivoAuthenticated,
   ProfesorTutorSecundariaAuthenticated,
 } from "../../../../interfaces/shared/JWTPayload";
-import { handlePrismaError } from "../../../../lib/helpers/handlers/errors/prisma";
 import { ValidatorConfig } from "../../../../lib/helpers/validators/data/types";
 import { validateData } from "../../../../lib/helpers/validators/data/validateData";
 import { validateEmail } from "../../../../lib/helpers/validators/data/validateCorreo";
@@ -31,9 +29,17 @@ import {
 } from "../../../../interfaces/shared/apis/api01/mis-datos/cambiar-correo/types";
 import { OTP_CODE_FOR_UPDATING_EMAIL_MINUTES } from "../../../../constants/expirations";
 
+import { verificarCorreoExistente } from "../../../../../core/databases/queries/RDP02/shared/emails/verificarCorreoExistente";
+import { buscarDirectivoPorIdSelect } from "../../../../../core/databases/queries/RDP02/directivos/buscarDirectivoPorId";
+import { buscarProfesorSecundariaPorDNISelect } from "../../../../../core/databases/queries/RDP02/profesor-secundaria/buscarProfesorSecundariaPorDNI";
+import { crearCodigoOTP } from "../../../../../core/databases/queries/RDP02/codigos-OTP/crearCodigoOTP";
+import { buscarCodigoOTP } from "../../../../../core/databases/queries/RDP02/codigos-OTP/buscarCodigoOTP";
+import { actualizarCorreoDirectivo } from "../../../../../core/databases/queries/RDP02/directivos/actualizarCorreoElectronicoDirectivo";
+import { actualizarCorreoProfesorTutorSecundaria } from "../../../../../core/databases/queries/RDP02/profesor-secundaria/actualizarCorreoProfesorTutorSecundaria";
+import { eliminarCodigoOTP } from "../../../../../core/databases/queries/RDP02/codigos-OTP/eliminarCodigoOTP";
+import { handleSQLError } from "../../../../lib/helpers/handlers/errors/postgreSQL";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.put(
   "/solicitar-cambio-correo",
@@ -44,6 +50,7 @@ router.put(
     try {
       const userData = req.user!;
       const userRole = req.userRole!;
+      const rdp02EnUso = req.RDP02_INSTANCE!;
       const { nuevoCorreo } = req.body as CambiarCorreoRequestBody;
 
       // Verificar que el rol es uno de los permitidos
@@ -76,25 +83,7 @@ router.put(
       }
 
       // Verificar si el correo ya existe en cualquiera de las tablas donde es único
-      const correoExistente = await prisma.$transaction(async (tx) => {
-        // Verificar en la tabla de Directivos
-        const directivo = await tx.t_Directivos.findFirst({
-          where: {
-            Correo_Electronico: nuevoCorreo,
-          },
-        });
-
-        if (directivo) return true;
-
-        // Verificar en la tabla de Profesores Secundaria (para Tutores)
-        const profesor = await tx.t_Profesores_Secundaria.findFirst({
-          where: {
-            Correo_Electronico: nuevoCorreo,
-          },
-        });
-
-        return !!profesor;
-      });
+      const correoExistente = await verificarCorreoExistente(nuevoCorreo);
 
       if (correoExistente) {
         return res.status(409).json({
@@ -108,15 +97,10 @@ router.put(
       let nombreCompleto = "";
 
       if (userRole === RolesSistema.Directivo) {
-        const directivo = await prisma.t_Directivos.findUnique({
-          where: {
-            Id_Directivo: (userData as DirectivoAuthenticated).Id_Directivo,
-          },
-          select: {
-            Nombres: true,
-            Apellidos: true,
-          },
-        });
+        const directivo = await buscarDirectivoPorIdSelect(
+          (userData as DirectivoAuthenticated).Id_Directivo,
+          ["Nombres", "Apellidos"]
+        );
 
         if (!directivo) {
           return res.status(404).json({
@@ -129,17 +113,11 @@ router.put(
         nombreCompleto = `${directivo.Nombres} ${directivo.Apellidos}`;
       } else {
         // Rol es Tutor
-        const tutor = await prisma.t_Profesores_Secundaria.findUnique({
-          where: {
-            DNI_Profesor_Secundaria: (
-              userData as ProfesorTutorSecundariaAuthenticated
-            ).DNI_Profesor_Secundaria,
-          },
-          select: {
-            Nombres: true,
-            Apellidos: true,
-          },
-        });
+        const tutor = await buscarProfesorSecundariaPorDNISelect(
+          (userData as ProfesorTutorSecundariaAuthenticated)
+            .DNI_Profesor_Secundaria,
+          ["Nombres", "Apellidos"]
+        );
 
         if (!tutor) {
           return res.status(404).json({
@@ -163,8 +141,8 @@ router.put(
         ahora + OTP_CODE_FOR_UPDATING_EMAIL_MINUTES * 60 * 1000;
 
       // Guardar código OTP en la base de datos usando timestamps Unix
-      await prisma.t_Codigos_OTP.create({
-        data: {
+      await crearCodigoOTP(
+        {
           Codigo: codigoOTP,
           Fecha_Creacion: ahora,
           Correo_Destino: nuevoCorreo,
@@ -176,7 +154,8 @@ router.put(
                   .DNI_Profesor_Secundaria,
           Fecha_Expiracion: fechaExpiracion,
         },
-      });
+        rdp02EnUso
+      );
 
       // Enviar correo electrónico con el código OTP
       await enviarCorreoOTP(nuevoCorreo, codigoOTP, nombreCompleto);
@@ -189,7 +168,7 @@ router.put(
       return res.status(200).json({
         success: true,
         message:
-          "Se ha enviado un código de verificación al nuevo correo electrónico",
+          "Se ha enviado un código de verificación al nuevo correo electrónico.",
         otpExpireTime: tiempoExpiracionSegundos,
       } as CambiarCorreoSuccessResponse);
     } catch (error) {
@@ -210,8 +189,8 @@ router.put(
         } as ErrorResponseAPIBase);
       }
 
-      // Intentar manejar el error con la función específica para errores de Prisma
-      const handledError = handlePrismaError(error);
+      // Intentar manejar el error con la función específica para errores SQL
+      const handledError = handleSQLError(error);
       if (handledError) {
         return res.status(handledError.status).json(handledError.response);
       }
@@ -237,6 +216,7 @@ router.post(
     try {
       const userData = req.user!;
       const userRole = req.userRole!;
+      const rdp02EnUso = req.RDP02_INSTANCE!;
       const { codigo, nuevoCorreo } = req.body as ConfirmarCorreoRequestBody;
 
       // Verificar que el rol es uno de los permitidos
@@ -289,17 +269,16 @@ router.post(
       const ahora = Date.now();
 
       // Buscar el código OTP en la base de datos comparando timestamps
-      const codigoOTP = await prisma.t_Codigos_OTP.findFirst({
-        where: {
+      const codigoOTP = await buscarCodigoOTP(
+        {
           Codigo: codigo,
           Correo_Destino: nuevoCorreo,
           Rol_Usuario: userRole,
           Id_Usuario: idUsuario,
-          Fecha_Expiracion: {
-            gte: ahora, // No ha expirado (timestamp actual es menor que expiración)
-          },
+          Fecha_Expiracion_Min: ahora, // No ha expirado (timestamp actual es menor que expiración)
         },
-      });
+        rdp02EnUso
+      );
 
       if (!codigoOTP) {
         return res.status(400).json({
@@ -311,34 +290,23 @@ router.post(
 
       // Actualizar el correo electrónico en la base de datos según el rol
       if (userRole === RolesSistema.Directivo) {
-        await prisma.t_Directivos.update({
-          where: {
-            Id_Directivo: (userData as DirectivoAuthenticated).Id_Directivo,
-          },
-          data: {
-            Correo_Electronico: nuevoCorreo,
-          },
-        });
+        await actualizarCorreoDirectivo(
+          (userData as DirectivoAuthenticated).Id_Directivo,
+          nuevoCorreo,
+          rdp02EnUso
+        );
       } else {
         // Rol es Tutor
-        await prisma.t_Profesores_Secundaria.update({
-          where: {
-            DNI_Profesor_Secundaria: (
-              userData as ProfesorTutorSecundariaAuthenticated
-            ).DNI_Profesor_Secundaria,
-          },
-          data: {
-            Correo_Electronico: nuevoCorreo,
-          },
-        });
+        await actualizarCorreoProfesorTutorSecundaria(
+          (userData as ProfesorTutorSecundariaAuthenticated)
+            .DNI_Profesor_Secundaria,
+          nuevoCorreo,
+          rdp02EnUso
+        );
       }
 
       // Eliminar el código OTP utilizado
-      await prisma.t_Codigos_OTP.delete({
-        where: {
-          Id_Codigo_OTP: codigoOTP.Id_Codigo_OTP,
-        },
-      });
+      await eliminarCodigoOTP(codigoOTP.Id_Codigo_OTP, rdp02EnUso);
 
       return res.status(200).json({
         success: true,
@@ -347,8 +315,8 @@ router.post(
     } catch (error) {
       console.error("Error al confirmar cambio de correo electrónico:", error);
 
-      // Intentar manejar el error con la función específica para errores de Prisma
-      const handledError = handlePrismaError(error);
+      // Intentar manejar el error con la función específica para errores SQL
+      const handledError = handleSQLError(error);
       if (handledError) {
         return res.status(handledError.status).json(handledError.response);
       }
