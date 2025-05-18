@@ -103,7 +103,7 @@ export async function query<T extends QueryResultRow = any>(
 ): Promise<QueryResult<T>> {
   // Determinar si es operación de lectura o escritura
   const isRead = esOperacionBDLectura(text);
-
+ console.log("Instancia: ", instanciaEnUso)
   // Validar los parámetros según el tipo de operación
   if (isRead) {
     // Para operaciones de LECTURA

@@ -12,9 +12,8 @@ import misDatosRouter from "./api/mis-datos";
 import auxiliaresRouter from "./api/auxiliares";
 import personalAdministrativoRouter from "./api/personal-administrativo";
 import modificacionesTablasRouter from "./api/modificaciones-tablas";
-import asistenciaRouter from "./api/asistencia-diaria";
+// import asistenciaRouter from "./api/asistencia-diaria";
 
-import verifyGenericUserForAPI01 from "../middlewares/verifyGenericUserForAPI01";
 import isAuxiliarAuthenticated from "../middlewares/isAuxiliarAuthenticated";
 import isProfesorPrimariaAuthenticated from "../middlewares/isProfesorPrimariaAuthenticated";
 import isProfesorSecundariaAuthenticated from "../middlewares/isProfesorSecundariaAuthenticated";
@@ -78,10 +77,18 @@ router.use(
 
 router.use(
   "/modificaciones-tablas",
-  verifyGenericUserForAPI01 as any,
+  decodedRol as any,
+  isDirectivoAuthenticated,
+  isProfesorPrimariaAuthenticated,
+  isProfesorSecundariaAuthenticated,
+  isTutorAuthenticated,
+  isAuxiliarAuthenticated,
+  isPersonalAdministrativoAuthenticated as any,
+  // isResponsableAuthenticated,
+  checkAuthentication as any,
   modificacionesTablasRouter
 );
 
-router.use("/asistencia-diaria", decodedRol as any, asistenciaRouter);
+// router.use("/asistencia-diaria", decodedRol as any, asistenciaRouter);
 
 export default router;
