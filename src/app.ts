@@ -18,7 +18,7 @@ app.use("/api", router);
 //Ruta de 404 NOT FOUND
 app.use("*", (req, res) => {
   res.status(404).json({
-    message: `La ruta ${req.originalUrl} no existe en este servidor`,
+    message: `La ruta ${req.originalUrl} no existe en este servidor - 404`,
   });
 });
 
