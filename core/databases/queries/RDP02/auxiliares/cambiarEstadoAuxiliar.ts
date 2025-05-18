@@ -10,7 +10,7 @@ import { T_Auxiliares } from "@prisma/client";
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos actualizados del auxiliar o null si no se encuentra
  */
-export async function actualizarEstadoAuxiliar(
+export async function cambiarEstadoAuxiliar(
   dniAuxiliar: string,
   nuevoEstado?: boolean,
   instanciaEnUso?: RDP02

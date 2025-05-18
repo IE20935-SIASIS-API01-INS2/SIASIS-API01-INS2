@@ -32,7 +32,7 @@ import { verificarExistenciaAuxiliar } from "../../../../core/databases/queries/
 import { buscarTodosLosAuxiliares } from "../../../../core/databases/queries/RDP02/auxiliares/buscarTodosLosAuxiliares";
 import { handleSQLError } from "../../../lib/helpers/handlers/errors/postgreSQL";
 import { actualizarDatosDeAuxiliar } from "../../../../core/databases/queries/RDP02/auxiliares/actualizarDatosDeAuxiliar";
-import { actualizarEstadoAuxiliar } from "../../../../core/databases/queries/RDP02/auxiliares/actualizarEstadoAuxiliar";
+import { cambiarEstadoAuxiliar } from "../../../../core/databases/queries/RDP02/auxiliares/cambiarEstadoAuxiliar";
 
 const router = Router();
 
@@ -271,7 +271,7 @@ router.patch(
       }
 
       // Cambiar el estado del auxiliar
-      const updatedAuxiliar = await actualizarEstadoAuxiliar(
+      const updatedAuxiliar = await cambiarEstadoAuxiliar(
         dni,
         undefined,
         rdp02EnUso

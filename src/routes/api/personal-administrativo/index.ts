@@ -1,5 +1,4 @@
 import { Request, Response, Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { ErrorResponseAPIBase } from "../../../interfaces/shared/apis/types";
 import { DirectivoAuthenticated } from "../../../interfaces/shared/JWTPayload";
 import {
@@ -8,7 +7,6 @@ import {
   UserErrorTypes,
   ValidationErrorTypes,
 } from "../../../interfaces/shared/apis/errors";
-import { handlePrismaError } from "../../../lib/helpers/handlers/errors/prisma";
 import { validateDNI } from "../../../lib/helpers/validators/data/validateDNI";
 import {
   GetPersonalAdministrativoSuccessResponse,
@@ -16,8 +14,14 @@ import {
   SwitchEstadoPersonalAdministrativoSuccessResponse,
 } from "../../../interfaces/shared/apis/api01/personal-administrativo/types";
 
+// Importar funciones de consulta
+
+import { buscarPersonalAdministrativoPorDNI } from "../../../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorDNI";
+import { cambiarEstadoPersonalAdministrativo } from "../../../../core/databases/queries/RDP02/personal-administrativo/cambiarEstadoPersonalAdministrativo";
+import { buscarTodosLosPersonalesAdministrativo } from "../../../../core/databases/queries/RDP02/personal-administrativo/buscarTodosLosPersonalesAdministrativos";
+import { handleSQLError } from "../../../lib/helpers/handlers/errors/postgreSQL";
+
 const router = Router();
-const prisma = new PrismaClient();
 
 // Obtener todo el personal administrativo
 router.get("/", (async (req: Request, res: Response) => {
@@ -32,25 +36,8 @@ router.get("/", (async (req: Request, res: Response) => {
       } as ErrorResponseAPIBase);
     }
 
-    const personalAdministrativo =
-      await prisma.t_Personal_Administrativo.findMany({
-        select: {
-          DNI_Personal_Administrativo: true,
-          Nombres: true,
-          Apellidos: true,
-          Genero: true,
-          Nombre_Usuario: true,
-          Estado: true,
-          Celular: true,
-          Google_Drive_Foto_ID: true,
-          Horario_Laboral_Entrada: true,
-          Horario_Laboral_Salida: true,
-          Cargo: true,
-        },
-        orderBy: {
-          Apellidos: "asc",
-        },
-      });
+    const rdp02EnUso = req.RDP02_INSTANCE!;
+    const personalAdministrativo = await buscarTodosLosPersonalesAdministrativo(rdp02EnUso);
 
     return res.status(200).json({
       success: true,
@@ -60,7 +47,7 @@ router.get("/", (async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error al obtener personal administrativo:", error);
 
-    const handledError = handlePrismaError(error);
+    const handledError = handleSQLError(error);
     if (handledError) {
       return res.status(handledError.status).json(handledError.response);
     }
@@ -78,6 +65,7 @@ router.get("/", (async (req: Request, res: Response) => {
 router.get("/:dni", (async (req: Request, res: Response) => {
   try {
     const { dni } = req.params;
+    const rdp02EnUso = req.RDP02_INSTANCE!;
 
     // Validar el formato del DNI
     const dniValidation = validateDNI(dni, true);
@@ -90,25 +78,7 @@ router.get("/:dni", (async (req: Request, res: Response) => {
     }
 
     // Obtener personal administrativo
-    const personalAdministrativo =
-      await prisma.t_Personal_Administrativo.findUnique({
-        where: {
-          DNI_Personal_Administrativo: dni,
-        },
-        select: {
-          DNI_Personal_Administrativo: true,
-          Nombres: true,
-          Apellidos: true,
-          Genero: true,
-          Nombre_Usuario: true,
-          Estado: true,
-          Celular: true,
-          Google_Drive_Foto_ID: true,
-          Horario_Laboral_Entrada: true,
-          Horario_Laboral_Salida: true,
-          Cargo: true,
-        },
-      });
+    const personalAdministrativo = await buscarPersonalAdministrativoPorDNI(dni, rdp02EnUso);
 
     if (!personalAdministrativo) {
       return res.status(404).json({
@@ -126,7 +96,7 @@ router.get("/:dni", (async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error al obtener personal administrativo:", error);
 
-    const handledError = handlePrismaError(error);
+    const handledError = handleSQLError(error);
     if (handledError) {
       return res.status(handledError.status).json(handledError.response);
     }
@@ -144,6 +114,7 @@ router.get("/:dni", (async (req: Request, res: Response) => {
 router.patch("/:dni/estado", (async (req: Request, res: Response) => {
   try {
     const { dni } = req.params;
+    const rdp02EnUso = req.RDP02_INSTANCE!;
 
     // Validar el formato del DNI
     const dniValidation = validateDNI(dni, true);
@@ -155,40 +126,16 @@ router.patch("/:dni/estado", (async (req: Request, res: Response) => {
       } as ErrorResponseAPIBase);
     }
 
-    // Verificar si el personal administrativo existe y obtener su estado actual
-    const existingPersonal = await prisma.t_Personal_Administrativo.findUnique({
-      where: {
-        DNI_Personal_Administrativo: dni,
-      },
-      select: {
-        DNI_Personal_Administrativo: true,
-        Estado: true,
-      },
-    });
+    // Cambiar el estado del personal administrativo
+    const updatedPersonal = await cambiarEstadoPersonalAdministrativo(dni, undefined, rdp02EnUso);
 
-    if (!existingPersonal) {
+    if (!updatedPersonal) {
       return res.status(404).json({
         success: false,
         message: "Personal administrativo no encontrado",
         errorType: UserErrorTypes.USER_NOT_FOUND,
       } as ErrorResponseAPIBase);
     }
-
-    // Cambiar el estado (invertir el valor actual)
-    const updatedPersonal = await prisma.t_Personal_Administrativo.update({
-      where: {
-        DNI_Personal_Administrativo: dni,
-      },
-      data: {
-        Estado: !existingPersonal.Estado,
-      },
-      select: {
-        DNI_Personal_Administrativo: true,
-        Nombres: true,
-        Apellidos: true,
-        Estado: true,
-      },
-    });
 
     const statusMessage = updatedPersonal.Estado ? "activado" : "desactivado";
 
@@ -203,7 +150,7 @@ router.patch("/:dni/estado", (async (req: Request, res: Response) => {
       error
     );
 
-    const handledError = handlePrismaError(error);
+    const handledError = handleSQLError(error);
     if (handledError) {
       return res.status(handledError.status).json(handledError.response);
     }
