@@ -1,5 +1,4 @@
 import { Request, Response, Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { ErrorResponseAPIBase } from "../../../interfaces/shared/apis/types";
 import isDirectivoAuthenticated from "../../../middlewares/isDirectivoAuthenticated";
 import checkAuthentication from "../../../middlewares/checkAuthentication";
@@ -11,7 +10,6 @@ import {
   UserErrorTypes,
   ValidationErrorTypes,
 } from "../../../interfaces/shared/apis/errors";
-import { handlePrismaError } from "../../../lib/helpers/handlers/errors/prisma";
 import { validateDNI } from "../../../lib/helpers/validators/data/validateDNI";
 import { ValidatorConfig } from "../../../lib/helpers/validators/data/types";
 import { validateNames } from "../../../lib/helpers/validators/data/validateNombres";
@@ -28,69 +26,59 @@ import {
   UpdateAuxiliarSuccessResponse,
 } from "../../../interfaces/shared/apis/api01/auxiliares/types";
 
+// Importar funciones de consulta
+import { buscarAuxiliarPorDNI } from "../../../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorDNI";
+import { verificarExistenciaAuxiliar } from "../../../../core/databases/queries/RDP02/auxiliares/verificarExistenciaAuxiliar";
+import { buscarTodosLosAuxiliares } from "../../../../core/databases/queries/RDP02/auxiliares/buscarTodosLosAuxiliares";
+import { handleSQLError } from "../../../lib/helpers/handlers/errors/postgreSQL";
+import { actualizarDatosDeAuxiliar } from "../../../../core/databases/queries/RDP02/auxiliares/actualizarDatosDeAuxiliar";
+import { actualizarEstadoAuxiliar } from "../../../../core/databases/queries/RDP02/auxiliares/actualizarEstadoAuxiliar";
+
 const router = Router();
-const prisma = new PrismaClient();
 
 // Obtener todos los auxiliares
-router.get(
-  "/",
-
-  (async (req: Request, res: Response) => {
-    try {
-      // Verificar que el usuario autenticado es un directivo
-      const directivo = req.user as DirectivoAuthenticated;
-      if (!directivo.Id_Directivo) {
-        return res.status(403).json({
-          success: false,
-          message: "No tiene permisos para acceder a esta información",
-          errorType: PermissionErrorTypes.INSUFFICIENT_PERMISSIONS,
-        } as ErrorResponseAPIBase);
-      }
-
-      const auxiliares = await prisma.t_Auxiliares.findMany({
-        select: {
-          DNI_Auxiliar: true,
-          Nombres: true,
-          Apellidos: true,
-          Genero: true,
-          Nombre_Usuario: true,
-          Estado: true,
-          Correo_Electronico: true,
-          Celular: true,
-          Google_Drive_Foto_ID: true,
-        },
-        orderBy: {
-          Apellidos: "asc",
-        },
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: "Auxiliares obtenidos exitosamente",
-        data: auxiliares,
-      } as GetAuxiliaresSuccessResponse);
-    } catch (error) {
-      console.error("Error al obtener auxiliares:", error);
-
-      const handledError = handlePrismaError(error);
-      if (handledError) {
-        return res.status(handledError.status).json(handledError.response);
-      }
-
-      return res.status(500).json({
+router.get("/", (async (req: Request, res: Response) => {
+  try {
+    // Verificar que el usuario autenticado es un directivo
+    const directivo = req.user as DirectivoAuthenticated;
+    if (!directivo.Id_Directivo) {
+      return res.status(403).json({
         success: false,
-        message: "Error al obtener auxiliares",
-        errorType: SystemErrorTypes.UNKNOWN_ERROR,
-        details: error,
+        message: "No tiene permisos para acceder a esta información",
+        errorType: PermissionErrorTypes.INSUFFICIENT_PERMISSIONS,
       } as ErrorResponseAPIBase);
     }
-  }) as any
-);
+
+    const rdp02EnUso = req.RDP02_INSTANCE!;
+    const auxiliares = await buscarTodosLosAuxiliares(rdp02EnUso);
+
+    return res.status(200).json({
+      success: true,
+      message: "Auxiliares obtenidos exitosamente",
+      data: auxiliares,
+    } as GetAuxiliaresSuccessResponse);
+  } catch (error) {
+    console.error("Error al obtener auxiliares:", error);
+
+    const handledError = handleSQLError(error);
+    if (handledError) {
+      return res.status(handledError.status).json(handledError.response);
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Error al obtener auxiliares",
+      errorType: SystemErrorTypes.UNKNOWN_ERROR,
+      details: error,
+    } as ErrorResponseAPIBase);
+  }
+}) as any);
 
 // Obtener un auxiliar por DNI
 router.get("/:dni", (async (req: Request, res: Response) => {
   try {
     const { dni } = req.params;
+    const rdp02EnUso = req.RDP02_INSTANCE!;
 
     // Validar el formato del DNI
     const dniValidation = validateDNI(dni, true);
@@ -103,22 +91,7 @@ router.get("/:dni", (async (req: Request, res: Response) => {
     }
 
     // Obtener auxiliar
-    const auxiliar = await prisma.t_Auxiliares.findUnique({
-      where: {
-        DNI_Auxiliar: dni,
-      },
-      select: {
-        DNI_Auxiliar: true,
-        Nombres: true,
-        Apellidos: true,
-        Genero: true,
-        Nombre_Usuario: true,
-        Estado: true,
-        Correo_Electronico: true,
-        Celular: true,
-        Google_Drive_Foto_ID: true,
-      },
-    });
+    const auxiliar = await buscarAuxiliarPorDNI(dni, rdp02EnUso);
 
     if (!auxiliar) {
       return res.status(404).json({
@@ -136,7 +109,7 @@ router.get("/:dni", (async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error al obtener auxiliar:", error);
 
-    const handledError = handlePrismaError(error);
+    const handledError = handleSQLError(error);
     if (handledError) {
       return res.status(handledError.status).json(handledError.response);
     }
@@ -154,6 +127,7 @@ router.get("/:dni", (async (req: Request, res: Response) => {
 router.put("/:dni", (async (req: Request, res: Response) => {
   try {
     const { dni } = req.params;
+    const rdp02EnUso = req.RDP02_INSTANCE!;
     const { Nombres, Apellidos, Genero, Celular, Correo_Electronico } =
       req.body as UpdateAuxiliarRequestBody;
 
@@ -168,11 +142,7 @@ router.put("/:dni", (async (req: Request, res: Response) => {
     }
 
     // Verificar si el auxiliar existe
-    const existingAuxiliar = await prisma.t_Auxiliares.findUnique({
-      where: {
-        DNI_Auxiliar: dni,
-      },
-    });
+    const existingAuxiliar = await verificarExistenciaAuxiliar(dni, rdp02EnUso);
 
     if (!existingAuxiliar) {
       return res.status(404).json({
@@ -244,21 +214,19 @@ router.put("/:dni", (async (req: Request, res: Response) => {
     }
 
     // Actualizar auxiliar
-    const updatedAuxiliar = await prisma.t_Auxiliares.update({
-      where: {
-        DNI_Auxiliar: dni,
-      },
-      data: updateData,
-      select: {
-        DNI_Auxiliar: true,
-        Nombres: true,
-        Apellidos: true,
-        Genero: true,
-        Estado: true,
-        Celular: true,
-        Correo_Electronico: true,
-      },
-    });
+    const updatedAuxiliar = await actualizarDatosDeAuxiliar(
+      dni,
+      updateData,
+      rdp02EnUso
+    );
+
+    if (!updatedAuxiliar) {
+      return res.status(500).json({
+        success: false,
+        message: "Error al actualizar auxiliar",
+        errorType: SystemErrorTypes.DATABASE_ERROR,
+      } as ErrorResponseAPIBase);
+    }
 
     return res.status(200).json({
       success: true,
@@ -268,7 +236,7 @@ router.put("/:dni", (async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error al actualizar auxiliar:", error);
 
-    const handledError = handlePrismaError(error);
+    const handledError = handleSQLError(error);
     if (handledError) {
       return res.status(handledError.status).json(handledError.response);
     }
@@ -290,6 +258,7 @@ router.patch(
   (async (req: Request, res: Response) => {
     try {
       const { dni } = req.params;
+      const rdp02EnUso = req.RDP02_INSTANCE!;
 
       // Validar el formato del DNI
       const dniValidation = validateDNI(dni, true);
@@ -301,40 +270,20 @@ router.patch(
         } as ErrorResponseAPIBase);
       }
 
-      // Verificar si el auxiliar existe y obtener su estado actual
-      const existingAuxiliar = await prisma.t_Auxiliares.findUnique({
-        where: {
-          DNI_Auxiliar: dni,
-        },
-        select: {
-          DNI_Auxiliar: true,
-          Estado: true,
-        },
-      });
+      // Cambiar el estado del auxiliar
+      const updatedAuxiliar = await actualizarEstadoAuxiliar(
+        dni,
+        undefined,
+        rdp02EnUso
+      );
 
-      if (!existingAuxiliar) {
+      if (!updatedAuxiliar) {
         return res.status(404).json({
           success: false,
           message: "Auxiliar no encontrado",
           errorType: UserErrorTypes.USER_NOT_FOUND,
         } as ErrorResponseAPIBase);
       }
-
-      // Cambiar el estado (invertir el valor actual)
-      const updatedAuxiliar = await prisma.t_Auxiliares.update({
-        where: {
-          DNI_Auxiliar: dni,
-        },
-        data: {
-          Estado: !existingAuxiliar.Estado,
-        },
-        select: {
-          DNI_Auxiliar: true,
-          Nombres: true,
-          Apellidos: true,
-          Estado: true,
-        },
-      });
 
       const statusMessage = updatedAuxiliar.Estado ? "activado" : "desactivado";
 
@@ -346,7 +295,7 @@ router.patch(
     } catch (error) {
       console.error("Error al cambiar estado del auxiliar:", error);
 
-      const handledError = handlePrismaError(error);
+      const handledError = handleSQLError(error);
       if (handledError) {
         return res.status(handledError.status).json(handledError.response);
       }
