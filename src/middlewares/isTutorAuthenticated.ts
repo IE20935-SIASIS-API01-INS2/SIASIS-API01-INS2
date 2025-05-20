@@ -66,21 +66,21 @@ const isTutorAuthenticated = async (
     const token = parts[1];
     const jwtSecretKey = process.env.JWT_KEY_TUTORES!;
 
-    // Si no tenemos el parámetro Rol, intentar determinar si este token es para este rol
-    if (!req.query.Rol) {
-      try {
-        // Intentar decodificar para ver si el token es para este rol
-        const decoded = jwt.decode(token) as JWTPayload;
-        if (!decoded || decoded.Rol !== RolesSistema.Tutor) {
-          return next(); // No es para este rol, continuar al siguiente middleware
-        }
-      } catch (error) {
-        // Error al decodificar, probablemente no es para este rol
-        return next();
-      }
-    }
-
     try {
+      // Si no tenemos el parámetro Rol, verificar primero si este token es para este rol
+      if (!req.query.Rol) {
+        try {
+          // Intentar verificar si el token es para este rol
+          const decoded = jwt.decode(token) as JWTPayload;
+          if (!decoded || decoded.Rol !== RolesSistema.Tutor) {
+            return next(); // No es para este rol, continuar al siguiente middleware
+          }
+        } catch (error) {
+          // Error al decodificar, probablemente no es para este rol
+          return next();
+        }
+      }
+
       // A partir de aquí, sabemos que el token debería ser para Tutor
       // Proceder con la verificación completa
       const decodedPayload = jwt.verify(token, jwtSecretKey) as JWTPayload;
@@ -94,8 +94,8 @@ const isTutorAuthenticated = async (
         return next();
       }
 
+      // Verificar si el rol está bloqueado
       try {
-        // Verificar si el rol está bloqueado
         const bloqueado = await verificarBloqueoRol(
           req,
           RolesSistema.Tutor,
@@ -106,11 +106,9 @@ const isTutorAuthenticated = async (
           return; // La función verificarBloqueoRol ya llamó a next()
         }
 
-        // Utilizar la nueva función buscarTutorPorDNIConAula en lugar de buscarAulasAsignadasProfesorSecundaria
-        // Esta función ya verificará si es un tutor válido (tiene aula asignada)
+        // Utilizar la función buscarTutorPorDNIConAula
         const tutor = await buscarTutorPorDNIConAula(decodedPayload.ID_Usuario);
 
-        // Si no se encuentra el tutor o no está activo
         if (!tutor) {
           req.authError = {
             type: UserErrorTypes.USER_NOT_FOUND,
@@ -126,9 +124,6 @@ const isTutorAuthenticated = async (
           };
           return next();
         }
-
-        // Ya no es necesario verificar si tiene aulas asignadas,
-        // buscarTutorPorDNIConAula solo retorna tutores con aula asignada
       } catch (dbError) {
         req.authError = {
           type: SystemErrorTypes.DATABASE_ERROR,
@@ -147,6 +142,7 @@ const isTutorAuthenticated = async (
       // Marcar como autenticado para que los siguientes middlewares no reprocesen
       req.isAuthenticated = true;
       req.userRole = RolesSistema.Tutor;
+      req.RDP02_INSTANCE = decodedPayload.RDP02_INSTANCE;
 
       // Si todo está bien, continuar
       next();
