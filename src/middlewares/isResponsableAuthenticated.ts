@@ -33,11 +33,6 @@ const isResponsableAuthenticated = async (
       return next();
     }
 
-    // Verificar si se envió el parámetro de Rol y si no coincide con Responsable, pasar al siguiente
-    if (req.query.Rol && req.query.Rol !== RolesSistema.Responsable) {
-      return next();
-    }
-
     // Obtener el token del encabezado de autorización
     const authHeader = req.headers.authorization;
 
@@ -155,7 +150,7 @@ const isResponsableAuthenticated = async (
       req.isAuthenticated = true;
       req.userRole = RolesSistema.Responsable;
       req.RDP02_INSTANCE = decodedPayload.RDP02_INSTANCE;
-      
+
       // Si todo está bien, continuar
       next();
     } catch (jwtError: any) {

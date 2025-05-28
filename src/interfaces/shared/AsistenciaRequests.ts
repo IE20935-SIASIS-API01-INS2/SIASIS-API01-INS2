@@ -56,3 +56,11 @@ export interface EstadoTomaAsistenciaResponseBody {
 export interface IniciarTomaAsistenciaRequestBody {
   TipoAsistencia: TipoAsistencia;
 }
+
+export interface AsistenciaMensualPersonal {
+  Entradas: string;
+  Salidas: string;
+  Id_Registro_Mensual_Entrada: number;
+  Id_Registro_Mensual_Salida: number;
+}
+

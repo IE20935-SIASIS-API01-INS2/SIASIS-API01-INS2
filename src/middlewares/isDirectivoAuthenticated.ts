@@ -30,11 +30,6 @@ const isDirectivoAuthenticated = async (
       return next();
     }
 
-    // Verificar si se envió el parámetro de Rol y si no coincide con Directivo, pasar al siguiente
-    if (req.query.Rol && req.query.Rol !== RolesSistema.Directivo) {
-      return next();
-    }
-
     // Obtener el token del encabezado de autorización
     const authHeader = req.headers.authorization;
 

@@ -23,6 +23,9 @@ import decodedRol from "../middlewares/decodedRol";
 import { RolesSistema } from "../interfaces/shared/RolesSistema";
 import { RDP02 } from "../interfaces/shared/RDP02Instancias";
 import { RDP03 } from "../interfaces/shared/RDP03Instancias";
+import PersonalRouter from "./api/personal/index";
+import UsuarioGenericoRouter from "./api/usuario-generico";
+import EventosRouter from "./api/eventos";
 
 const router = Router();
 
@@ -89,6 +92,10 @@ router.use(
   modificacionesTablasRouter
 );
 
-// router.use("/asistencia-diaria", decodedRol as any, asistenciaRouter);
+router.use("/personal", decodedRol as any, PersonalRouter);
+
+router.use("/usuario-generico", decodedRol as any, UsuarioGenericoRouter);
+
+router.use("/eventos", decodedRol as any, EventosRouter);
 
 export default router;

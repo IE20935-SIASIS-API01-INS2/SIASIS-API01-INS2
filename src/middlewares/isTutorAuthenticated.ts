@@ -31,11 +31,6 @@ const isTutorAuthenticated = async (
       return next();
     }
 
-    // Verificar si se envió el parámetro de Rol y si no coincide con Tutor, pasar al siguiente
-    if (req.query.Rol && req.query.Rol !== RolesSistema.Tutor) {
-      return next();
-    }
-
     // Obtener el token del encabezado de autorización
     const authHeader = req.headers.authorization;
 

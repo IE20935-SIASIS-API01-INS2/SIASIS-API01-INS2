@@ -89,6 +89,12 @@ export enum AuthenticationErrorTypes {
   TEMPORARY_BLOCKED = "TEMPORARY_BLOCKED",
 }
 
+export enum DataErrorTypes {
+  RECORD_NOT_FOUND = "RECORD_NOT_FOUND", // Registro específico no encontrado
+  NO_DATA_AVAILABLE = "NO_DATA_AVAILABLE", // No hay datos disponibles para el período
+  DATA_NOT_EXISTS = "DATA_NOT_EXISTS", // Los datos no existen para los parámetros dados
+}
+
 type AllErrorTypes =
   | RequestErrorTypes
   | TokenErrorTypes
@@ -98,6 +104,7 @@ type AllErrorTypes =
   | ValidationErrorTypes
   | DataConflictErrorTypes
   | FileErrorTypes
+  | DataErrorTypes
   | AuthenticationErrorTypes;
 
 export default AllErrorTypes;
