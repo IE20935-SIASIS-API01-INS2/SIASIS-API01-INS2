@@ -16,7 +16,7 @@ import {
 
 // Importar funciones de consulta
 
-import { buscarPersonalAdministrativoPorDNI } from "../../../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorDNI";
+import { buscarPersonalAdministrativoPorDNISelect } from "../../../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorDNI";
 import { cambiarEstadoPersonalAdministrativo } from "../../../../core/databases/queries/RDP02/personal-administrativo/cambiarEstadoPersonalAdministrativo";
 import { buscarTodosLosPersonalesAdministrativo } from "../../../../core/databases/queries/RDP02/personal-administrativo/buscarTodosLosPersonalesAdministrativos";
 import { handleSQLError } from "../../../lib/helpers/handlers/errors/postgreSQL";
@@ -37,7 +37,9 @@ router.get("/", (async (req: Request, res: Response) => {
     }
 
     const rdp02EnUso = req.RDP02_INSTANCE!;
-    const personalAdministrativo = await buscarTodosLosPersonalesAdministrativo(rdp02EnUso);
+    const personalAdministrativo = await buscarTodosLosPersonalesAdministrativo(
+      rdp02EnUso
+    );
 
     return res.status(200).json({
       success: true,
@@ -78,7 +80,22 @@ router.get("/:dni", (async (req: Request, res: Response) => {
     }
 
     // Obtener personal administrativo
-    const personalAdministrativo = await buscarPersonalAdministrativoPorDNI(dni, rdp02EnUso);
+    const personalAdministrativo =
+      await buscarPersonalAdministrativoPorDNISelect(
+        dni,
+        [
+          "DNI_Personal_Administrativo",
+          "Nombres",
+          "Apellidos",
+          "Nombre_Usuario",
+          "Genero",
+          "Estado",
+          "Cargo",
+          "Celular",
+          "Google_Drive_Foto_ID",
+        ],
+        rdp02EnUso
+      );
 
     if (!personalAdministrativo) {
       return res.status(404).json({
@@ -127,7 +144,11 @@ router.patch("/:dni/estado", (async (req: Request, res: Response) => {
     }
 
     // Cambiar el estado del personal administrativo
-    const updatedPersonal = await cambiarEstadoPersonalAdministrativo(dni, undefined, rdp02EnUso);
+    const updatedPersonal = await cambiarEstadoPersonalAdministrativo(
+      dni,
+      undefined,
+      rdp02EnUso
+    );
 
     if (!updatedPersonal) {
       return res.status(404).json({

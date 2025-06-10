@@ -105,8 +105,7 @@ router.post("/", (async (req: Request, res: Response) => {
         "Google_Drive_Foto_ID",
         "Genero",
         "Estado",
-        "Horario_Laboral_Entrada",
-        "Horario_Laboral_Salida",
+
       ]);
 
     // Si no existe el personal administrativo, retornar error

@@ -215,8 +215,6 @@ router.get("/", (async (req: Request, res: Response) => {
             "Estado",
             "Celular",
             "Google_Drive_Foto_ID",
-            "Horario_Laboral_Entrada",
-            "Horario_Laboral_Salida",
             "Cargo",
           ],
           rdp02EnUso

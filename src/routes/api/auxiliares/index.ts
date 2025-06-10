@@ -27,7 +27,7 @@ import {
 } from "../../../interfaces/shared/apis/api01/auxiliares/types";
 
 // Importar funciones de consulta
-import { buscarAuxiliarPorDNI } from "../../../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorDNI";
+import { buscarAuxiliarPorDNISelect } from "../../../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorDNI";
 import { verificarExistenciaAuxiliar } from "../../../../core/databases/queries/RDP02/auxiliares/verificarExistenciaAuxiliar";
 import { buscarTodosLosAuxiliares } from "../../../../core/databases/queries/RDP02/auxiliares/buscarTodosLosAuxiliares";
 import { handleSQLError } from "../../../lib/helpers/handlers/errors/postgreSQL";
@@ -91,7 +91,21 @@ router.get("/:dni", (async (req: Request, res: Response) => {
     }
 
     // Obtener auxiliar
-    const auxiliar = await buscarAuxiliarPorDNI(dni, rdp02EnUso);
+    const auxiliar = await buscarAuxiliarPorDNISelect(
+      dni,
+      [
+        "DNI_Auxiliar",
+        "Nombres",
+        "Apellidos",
+        "Celular",
+        "Estado",
+        "Genero",
+        "Nombre_Usuario",
+        "Correo_Electronico",
+        "Google_Drive_Foto_ID",
+      ],
+      rdp02EnUso
+    );
 
     if (!auxiliar) {
       return res.status(404).json({
