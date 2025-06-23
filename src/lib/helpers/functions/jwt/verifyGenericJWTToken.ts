@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { TokenErrorTypes } from "../../../../interfaces/shared/apis/errors";
+import { TokenErrorTypes } from "../../../../interfaces/shared/errors";
 import { JWTPayload } from "../../../../interfaces/shared/JWTPayload";
 
 interface TokenPreliminaryCheck {

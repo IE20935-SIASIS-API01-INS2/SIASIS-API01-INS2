@@ -4,22 +4,23 @@ import {
   RequestErrorTypes,
   SystemErrorTypes,
   UserErrorTypes,
-} from "../../../../interfaces/shared/apis/errors";
+} from "../../../../interfaces/shared/errors";
 import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
 import { RolesSistema } from "../../../../interfaces/shared/RolesSistema";
 import {
   AuxiliarAuthenticated,
+  DirectivoAuthenticated,
   PersonalAdministrativoAuthenticated,
   ProfesorPrimariaAuthenticated,
   ProfesorTutorSecundariaAuthenticated,
 } from "../../../../interfaces/shared/JWTPayload";
-import { buscarUsuarioGenericoPorRolYDNI } from "../../../../../core/databases/queries/RDP02/usuario-generico/buscarUsuarioGenericoPorRolYDNI";
 import { buscarAsistenciaMensualPorRol } from "../../../../../core/databases/queries/RDP02/asistencias-mensuales/buscarAsistenciaMensualPorRolDNI";
 import {
   AsistenciaCompletaMensualDePersonal,
   GetAsistenciaMensualDePersonalSuccessResponse,
 } from "../../../../interfaces/shared/apis/api01/personal/types";
 import { Meses } from "../../../../interfaces/shared/Meses";
+import { buscarUsuarioGenericoPorRolyIDoDNI } from "../../../../../core/databases/queries/RDP02/usuarios-genericos/buscarUsuarioGenericoPorRolyIDoDNI";
 
 const MisAsistenciasMensualesRouter = Router();
 
@@ -43,10 +44,7 @@ MisAsistenciasMensualesRouter.get("/", (async (req: Request, res: Response) => {
     }
 
     // Verificar que el rol autenticado tiene control de asistencia
-    const rolesSinAsistencia = [
-      RolesSistema.Directivo,
-      RolesSistema.Responsable,
-    ];
+    const rolesSinAsistencia = [RolesSistema.Responsable];
     if (rolesSinAsistencia.includes(userRole)) {
       return res.status(403).json({
         success: false,
@@ -56,26 +54,29 @@ MisAsistenciasMensualesRouter.get("/", (async (req: Request, res: Response) => {
     }
 
     // Extraer DNI según el rol del usuario autenticado
-    let dniUsuario: string;
+    let idOdniUsuario: string | number;
 
     switch (userRole) {
+      case RolesSistema.Directivo:
+        idOdniUsuario = (userData as DirectivoAuthenticated).Id_Directivo;
+        break;
       case RolesSistema.ProfesorPrimaria:
-        dniUsuario = (userData as ProfesorPrimariaAuthenticated)
+        idOdniUsuario = (userData as ProfesorPrimariaAuthenticated)
           .DNI_Profesor_Primaria;
         break;
 
       case RolesSistema.ProfesorSecundaria:
       case RolesSistema.Tutor:
-        dniUsuario = (userData as ProfesorTutorSecundariaAuthenticated)
+        idOdniUsuario = (userData as ProfesorTutorSecundariaAuthenticated)
           .DNI_Profesor_Secundaria;
         break;
 
       case RolesSistema.Auxiliar:
-        dniUsuario = (userData as AuxiliarAuthenticated).DNI_Auxiliar;
+        idOdniUsuario = (userData as AuxiliarAuthenticated).DNI_Auxiliar;
         break;
 
       case RolesSistema.PersonalAdministrativo:
-        dniUsuario = (userData as PersonalAdministrativoAuthenticated)
+        idOdniUsuario = (userData as PersonalAdministrativoAuthenticated)
           .DNI_Personal_Administrativo;
         break;
 
@@ -88,9 +89,9 @@ MisAsistenciasMensualesRouter.get("/", (async (req: Request, res: Response) => {
     }
 
     // Buscar datos básicos del personal (para confirmar que existe y está activo)
-    const personalData = await buscarUsuarioGenericoPorRolYDNI(
+    const personalData = await buscarUsuarioGenericoPorRolyIDoDNI(
       userRole,
-      dniUsuario,
+      idOdniUsuario,
       rdp02EnUso
     );
 
@@ -105,7 +106,7 @@ MisAsistenciasMensualesRouter.get("/", (async (req: Request, res: Response) => {
     // Buscar asistencias del mes
     const asistenciasData = await buscarAsistenciaMensualPorRol(
       userRole,
-      dniUsuario,
+      idOdniUsuario,
       mes,
       rdp02EnUso
     );
@@ -122,11 +123,12 @@ MisAsistenciasMensualesRouter.get("/", (async (req: Request, res: Response) => {
     const asistenciaCompleta: AsistenciaCompletaMensualDePersonal = {
       Id_Registro_Mensual_Entrada: asistenciasData.Id_Registro_Mensual_Entrada,
       Id_Registro_Mensual_Salida: asistenciasData.Id_Registro_Mensual_Salida,
-      DNI_Usuario: personalData.DNI_Usuario,
+      ID_O_DNI_Usuario: personalData.ID_O_DNI_Usuario,
       Rol: personalData.Rol,
       Nombres: personalData.Nombres,
       Apellidos: personalData.Apellidos,
       Genero: personalData.Genero,
+      Google_Drive_Foto_ID: personalData.Google_Drive_Foto_ID,
       Entradas: asistenciasData.Entradas,
       Salidas: asistenciasData.Salidas,
       Mes: mes as Meses,

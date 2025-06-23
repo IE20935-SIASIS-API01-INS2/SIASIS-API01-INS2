@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ErrorResponseAPIBase } from "../../../interfaces/shared/apis/types";
-import { SystemErrorTypes } from "../../../interfaces/shared/apis/errors";
+import { SystemErrorTypes } from "../../../interfaces/shared/errors";
 import { GetUltimasModificacionesSuccessResponse } from "../../../interfaces/shared/apis/shared/modificaciones-tablas/types";
 import { handleSQLError } from "../../../lib/helpers/handlers/errors/postgreSQL";
 import { obtenerUltimasModificacionesTablas } from "../../../../core/databases/queries/RDP02/ultimas-modificaciones/obtenerUltimasModificacionesTablas";

@@ -1,7 +1,113 @@
-import { AsistenciaMensualPersonal } from "../../../../../src/interfaces/shared/AsistenciaRequests";
 import { RDP02 } from "../../../../../src/interfaces/shared/RDP02Instancias";
 import { RolesSistema } from "../../../../../src/interfaces/shared/RolesSistema";
 import { query } from "../../../connectors/postgres";
+
+export interface ResultadoConsultaAsistenciasMensuales {
+  Entradas: string;
+  Salidas: string;
+  Id_Registro_Mensual_Entrada: number;
+  Id_Registro_Mensual_Salida: number;
+}
+
+/**
+ * Busca asistencias mensuales de directivos CON IDs
+ * NOTA: Directivos usan Id_Directivo (numérico) en lugar de DNI
+ */
+export async function buscarAsistenciaMensualDirectivo(
+  idDirectivo: number, // Viene como string pero se usa como número
+  mes: number,
+  instanciaEnUso?: RDP02
+): Promise<ResultadoConsultaAsistenciasMensuales | null> {
+  // Convertir string a número para la consulta
+
+  if (isNaN(idDirectivo)) {
+    console.error(`ID de directivo inválido: ${idDirectivo}`);
+    return null;
+  }
+
+  const sqlEntradas = `
+    SELECT 
+      "Id_C_E_M_P_Directivo",
+      "Entradas"
+    FROM "T_Control_Entrada_Mensual_Directivos"
+    WHERE "Id_Directivo" = $1 AND "Mes" = $2
+    LIMIT 1
+  `;
+
+  const sqlSalidas = `
+    SELECT 
+      "Id_C_S_M_P_Directivo",
+      "Salidas"
+    FROM "T_Control_Salida_Mensual_Directivos"
+    WHERE "Id_Directivo" = $1 AND "Mes" = $2
+    LIMIT 1
+  `;
+
+  const [resultEntradas, resultSalidas] = await Promise.all([
+    query(instanciaEnUso, sqlEntradas, [idDirectivo, mes]), // Usar ID numérico
+    query(instanciaEnUso, sqlSalidas, [idDirectivo, mes]),
+  ]);
+
+  // Si no hay registros de entradas ni salidas, retornar null
+  if (resultEntradas.rows.length === 0 && resultSalidas.rows.length === 0) {
+    return null;
+  }
+
+  return {
+    Entradas: resultEntradas.rows[0]?.Entradas || "{}",
+    Salidas: resultSalidas.rows[0]?.Salidas || "{}",
+    Id_Registro_Mensual_Entrada:
+      resultEntradas.rows[0]?.Id_C_E_M_P_Directivo || 0,
+    Id_Registro_Mensual_Salida:
+      resultSalidas.rows[0]?.Id_C_S_M_P_Directivo || 0,
+  };
+}
+
+/**
+ * ✅ NUEVO: Busca asistencias mensuales de personal administrativo CON IDs
+ */
+export async function buscarAsistenciaMensualPersonalAdministrativo(
+  dni: string,
+  mes: number,
+  instanciaEnUso?: RDP02
+): Promise<ResultadoConsultaAsistenciasMensuales | null> {
+  const sqlEntradas = `
+    SELECT 
+      "Id_C_E_M_P_Administrativo",
+      "Entradas"
+    FROM "T_Control_Entrada_Mensual_Personal_Administrativo"
+    WHERE "DNI_Personal_Administrativo" = $1 AND "Mes" = $2
+    LIMIT 1
+  `;
+
+  const sqlSalidas = `
+    SELECT 
+      "Id_C_E_M_P_Administrativo",
+      "Salidas"
+    FROM "T_Control_Salida_Mensual_Personal_Administrativo"
+    WHERE "DNI_Personal_Administrativo" = $1 AND "Mes" = $2
+    LIMIT 1
+  `;
+
+  const [resultEntradas, resultSalidas] = await Promise.all([
+    query(instanciaEnUso, sqlEntradas, [dni, mes]),
+    query(instanciaEnUso, sqlSalidas, [dni, mes]),
+  ]);
+
+  // Si no hay registros de entradas ni salidas, retornar null
+  if (resultEntradas.rows.length === 0 && resultSalidas.rows.length === 0) {
+    return null;
+  }
+
+  return {
+    Entradas: resultEntradas.rows[0]?.Entradas || "{}",
+    Salidas: resultSalidas.rows[0]?.Salidas || "{}",
+    Id_Registro_Mensual_Entrada:
+      resultEntradas.rows[0]?.Id_C_E_M_P_Administrativo || 0,
+    Id_Registro_Mensual_Salida:
+      resultSalidas.rows[0]?.Id_C_E_M_P_Administrativo || 0,
+  };
+}
 
 /**
  * Busca asistencias mensuales de profesores de primaria CON IDs
@@ -10,7 +116,7 @@ export async function buscarAsistenciaMensualProfesorPrimaria(
   dni: string,
   mes: number,
   instanciaEnUso?: RDP02
-): Promise<AsistenciaMensualPersonal | null> {
+): Promise<ResultadoConsultaAsistenciasMensuales | null> {
   const sqlEntradas = `
     SELECT 
       "Id_C_E_M_P_Profesores_Primaria",
@@ -42,8 +148,10 @@ export async function buscarAsistenciaMensualProfesorPrimaria(
   return {
     Entradas: resultEntradas.rows[0]?.Entradas || "{}",
     Salidas: resultSalidas.rows[0]?.Salidas || "{}",
-    Id_Registro_Mensual_Entrada: resultEntradas.rows[0]?.Id_C_E_M_P_Profesores_Primaria || 0,
-    Id_Registro_Mensual_Salida: resultSalidas.rows[0]?.Id_C_E_M_P_Profesores_Primaria || 0,
+    Id_Registro_Mensual_Entrada:
+      resultEntradas.rows[0]?.Id_C_E_M_P_Profesores_Primaria || 0,
+    Id_Registro_Mensual_Salida:
+      resultSalidas.rows[0]?.Id_C_E_M_P_Profesores_Primaria || 0,
   };
 }
 
@@ -54,7 +162,7 @@ export async function buscarAsistenciaMensualProfesorSecundaria(
   dni: string,
   mes: number,
   instanciaEnUso?: RDP02
-): Promise<AsistenciaMensualPersonal | null> {
+): Promise<ResultadoConsultaAsistenciasMensuales | null> {
   const sqlEntradas = `
     SELECT 
       "Id_C_E_M_P_Profesores_Secundaria",
@@ -85,8 +193,10 @@ export async function buscarAsistenciaMensualProfesorSecundaria(
   return {
     Entradas: resultEntradas.rows[0]?.Entradas || "{}",
     Salidas: resultSalidas.rows[0]?.Salidas || "{}",
-    Id_Registro_Mensual_Entrada: resultEntradas.rows[0]?.Id_C_E_M_P_Profesores_Secundaria || 0,
-    Id_Registro_Mensual_Salida: resultSalidas.rows[0]?.Id_C_E_M_P_Profesores_Secundaria || 0,
+    Id_Registro_Mensual_Entrada:
+      resultEntradas.rows[0]?.Id_C_E_M_P_Profesores_Secundaria || 0,
+    Id_Registro_Mensual_Salida:
+      resultSalidas.rows[0]?.Id_C_E_M_P_Profesores_Secundaria || 0,
   };
 }
 
@@ -97,7 +207,7 @@ export async function buscarAsistenciaMensualAuxiliar(
   dni: string,
   mes: number,
   instanciaEnUso?: RDP02
-): Promise<AsistenciaMensualPersonal | null> {
+): Promise<ResultadoConsultaAsistenciasMensuales | null> {
   const sqlEntradas = `
     SELECT 
       "Id_C_E_M_P_Auxiliar",
@@ -128,7 +238,8 @@ export async function buscarAsistenciaMensualAuxiliar(
   return {
     Entradas: resultEntradas.rows[0]?.Entradas || "{}",
     Salidas: resultSalidas.rows[0]?.Salidas || "{}",
-    Id_Registro_Mensual_Entrada: resultEntradas.rows[0]?.Id_C_E_M_P_Auxiliar || 0,
+    Id_Registro_Mensual_Entrada:
+      resultEntradas.rows[0]?.Id_C_E_M_P_Auxiliar || 0,
     Id_Registro_Mensual_Salida: resultSalidas.rows[0]?.Id_C_E_M_P_Auxiliar || 0,
   };
 }
@@ -136,11 +247,11 @@ export async function buscarAsistenciaMensualAuxiliar(
 /**
  * Busca asistencias mensuales de personal administrativo CON IDs
  */
-export async function buscarAsistenciaMensualPersonalAdministrativo(
+export async function buscarResultadoConsultaAsistenciasMensualesAdministrativo(
   dni: string,
   mes: number,
   instanciaEnUso?: RDP02
-): Promise<AsistenciaMensualPersonal | null> {
+): Promise<ResultadoConsultaAsistenciasMensuales | null> {
   const sqlEntradas = `
     SELECT 
       "Id_C_E_M_P_Administrativo",
@@ -171,8 +282,10 @@ export async function buscarAsistenciaMensualPersonalAdministrativo(
   return {
     Entradas: resultEntradas.rows[0]?.Entradas || "{}",
     Salidas: resultSalidas.rows[0]?.Salidas || "{}",
-    Id_Registro_Mensual_Entrada: resultEntradas.rows[0]?.Id_C_E_M_P_Administrativo || 0,
-    Id_Registro_Mensual_Salida: resultSalidas.rows[0]?.Id_C_E_M_P_Administrativo || 0,
+    Id_Registro_Mensual_Entrada:
+      resultEntradas.rows[0]?.Id_C_E_M_P_Administrativo || 0,
+    Id_Registro_Mensual_Salida:
+      resultSalidas.rows[0]?.Id_C_E_M_P_Administrativo || 0,
   };
 }
 
@@ -181,14 +294,21 @@ export async function buscarAsistenciaMensualPersonalAdministrativo(
  */
 export async function buscarAsistenciaMensualPorRol(
   rol: RolesSistema,
-  dni: string,
+  id_o_dni: string | number,
   mes: number,
   instanciaEnUso?: RDP02
-): Promise<AsistenciaMensualPersonal | null> {
+): Promise<ResultadoConsultaAsistenciasMensuales | null> {
   switch (rol) {
+    case RolesSistema.Directivo:
+      return await buscarAsistenciaMensualDirectivo(
+        id_o_dni as number,
+        mes,
+        instanciaEnUso
+      );
+
     case RolesSistema.ProfesorPrimaria:
       return await buscarAsistenciaMensualProfesorPrimaria(
-        dni,
+        id_o_dni as string,
         mes,
         instanciaEnUso
       );
@@ -196,17 +316,21 @@ export async function buscarAsistenciaMensualPorRol(
     case RolesSistema.ProfesorSecundaria:
     case RolesSistema.Tutor:
       return await buscarAsistenciaMensualProfesorSecundaria(
-        dni,
+        id_o_dni as string,
         mes,
         instanciaEnUso
       );
 
     case RolesSistema.Auxiliar:
-      return await buscarAsistenciaMensualAuxiliar(dni, mes, instanciaEnUso);
+      return await buscarAsistenciaMensualAuxiliar(
+        id_o_dni as string,
+        mes,
+        instanciaEnUso
+      );
 
     case RolesSistema.PersonalAdministrativo:
-      return await buscarAsistenciaMensualPersonalAdministrativo(
-        dni,
+      return await buscarResultadoConsultaAsistenciasMensualesAdministrativo(
+        id_o_dni as string,
         mes,
         instanciaEnUso
       );

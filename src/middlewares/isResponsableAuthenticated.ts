@@ -6,12 +6,12 @@ import {
   JWTPayload,
   ResponsableAuthenticated,
 } from "../interfaces/shared/JWTPayload";
-import { ErrorObjectGeneric } from "../interfaces/shared/apis/errors/details";
+import { ErrorObjectGeneric } from "../interfaces/shared/errors/details";
 import {
   SystemErrorTypes,
   TokenErrorTypes,
   UserErrorTypes,
-} from "../interfaces/shared/apis/errors";
+} from "../interfaces/shared/errors";
 import {
   buscarResponsablePorDNI,
   verificarEstudiantesActivosResponsable,

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { RolesSistema } from "../interfaces/shared/RolesSistema";
-import { RequestErrorTypes } from "../interfaces/shared/apis/errors";
+import { RequestErrorTypes } from "../interfaces/shared/errors";
 import { ErrorResponseAPIBase } from "../interfaces/shared/apis/types";
 
 /**

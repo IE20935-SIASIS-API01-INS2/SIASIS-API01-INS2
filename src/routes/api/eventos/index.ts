@@ -3,8 +3,7 @@ import { ErrorResponseAPIBase } from "../../../interfaces/shared/apis/types";
 import {
   RequestErrorTypes,
   SystemErrorTypes,
-} from "../../../interfaces/shared/apis/errors";
-import { GetEventosSuccessResponse } from "../../../interfaces/shared/apis/api01/eventos/types";
+} from "../../../interfaces/shared/errors";
 
 // Importar funciones de consulta
 import { buscarEventosPorMes } from "../../../../core/databases/queries/RDP02/eventos/buscarEventosPorMes";
@@ -16,6 +15,7 @@ import isTutorAuthenticated from "../../../middlewares/isTutorAuthenticated";
 import isAuxiliarAuthenticated from "../../../middlewares/isAuxiliarAuthenticated";
 import isPersonalAdministrativoAuthenticated from "../../../middlewares/isPersonalAdministrativoAuthenticated";
 import checkAuthentication from "../../../middlewares/checkAuthentication";
+import { GetEventosSuccessResponse } from "../../../interfaces/shared/apis/eventos/types";
 
 const EventosRouter = Router();
 

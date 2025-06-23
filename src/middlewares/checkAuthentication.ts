@@ -1,7 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 
 import { ErrorResponseAPIBase } from "../interfaces/shared/apis/types";
-import { PermissionErrorTypes, SystemErrorTypes, TokenErrorTypes, UserErrorTypes } from "../interfaces/shared/apis/errors";
+import {
+  PermissionErrorTypes,
+  SystemErrorTypes,
+  TokenErrorTypes,
+  UserErrorTypes,
+} from "../interfaces/shared/errors";
 
 // Middleware final que verifica si alguno de los middlewares anteriores
 // ha autenticado correctamente al usuario

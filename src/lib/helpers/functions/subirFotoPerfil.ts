@@ -4,7 +4,7 @@ import {
   RequestErrorTypes,
   SystemErrorTypes,
   UserErrorTypes,
-} from "../../../interfaces/shared/apis/errors";
+} from "../../../interfaces/shared/errors";
 import { deleteFileFromDrive } from "../../../../core/external/google/drive/deleteFileFromDrive";
 import { uploadFileToDrive } from "../../../../core/external/google/drive/uploadFileToDrive";
 import { RDP02 } from "../../../interfaces/shared/RDP02Instancias";

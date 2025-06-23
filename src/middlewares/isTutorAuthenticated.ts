@@ -7,12 +7,12 @@ import {
   ProfesorTutorSecundariaAuthenticated,
 } from "../interfaces/shared/JWTPayload";
 
-import { ErrorObjectGeneric } from "../interfaces/shared/apis/errors/details";
+import { ErrorObjectGeneric } from "../interfaces/shared/errors/details";
 import {
   SystemErrorTypes,
   TokenErrorTypes,
   UserErrorTypes,
-} from "../interfaces/shared/apis/errors";
+} from "../interfaces/shared/errors";
 import { buscarTutorPorDNIConAula } from "../../core/databases/queries/RDP02/profesor-secundaria/buscarTutorPorDNIConAula";
 
 // Middleware para verificar si el usuario es un Tutor de Secundaria

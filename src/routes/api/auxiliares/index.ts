@@ -9,7 +9,7 @@ import {
   SystemErrorTypes,
   UserErrorTypes,
   ValidationErrorTypes,
-} from "../../../interfaces/shared/apis/errors";
+} from "../../../interfaces/shared/errors";
 import { validateDNI } from "../../../lib/helpers/validators/data/validateDNI";
 import { ValidatorConfig } from "../../../lib/helpers/validators/data/types";
 import { validateNames } from "../../../lib/helpers/validators/data/validateNombres";

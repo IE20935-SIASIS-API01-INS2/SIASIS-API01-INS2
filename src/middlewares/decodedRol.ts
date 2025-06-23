@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { TokenErrorTypes } from "../interfaces/shared/apis/errors";
+import { TokenErrorTypes } from "../interfaces/shared/errors";
 import verifyGenericJWTToken from "../lib/helpers/functions/jwt/verifyGenericJWTToken";
 import { RolesSistema } from "../interfaces/shared/RolesSistema";
 // Middleware para decodificar el token de la cabecera y

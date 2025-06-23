@@ -12,7 +12,7 @@ import {
   SystemErrorTypes,
   UserErrorTypes,
   ValidationErrorTypes,
-} from "../../../../interfaces/shared/apis/errors";
+} from "../../../../interfaces/shared/errors";
 import {
   DirectivoAuthenticated,
   ProfesorTutorSecundariaAuthenticated,

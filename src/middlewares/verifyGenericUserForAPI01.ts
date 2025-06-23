@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 
-import { TokenErrorTypes } from "../interfaces/shared/apis/errors";
+import { TokenErrorTypes } from "../interfaces/shared/errors";
 import { ErrorResponseAPIBase } from "../interfaces/shared/apis/types";
 import verifyGenericJWTToken from "../lib/helpers/functions/jwt/verifyGenericJWTToken";
 import { RolesSistema } from "../interfaces/shared/RolesSistema";

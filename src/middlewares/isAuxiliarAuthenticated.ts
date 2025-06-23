@@ -6,12 +6,12 @@ import {
   JWTPayload,
 } from "../interfaces/shared/JWTPayload";
 import { verificarBloqueoRol } from "../lib/helpers/verificators/verificarBloqueoRol";
-import { ErrorObjectGeneric } from "../interfaces/shared/apis/errors/details";
+import { ErrorObjectGeneric } from "../interfaces/shared/errors/details";
 import {
   SystemErrorTypes,
   TokenErrorTypes,
   UserErrorTypes,
-} from "../interfaces/shared/apis/errors";
+} from "../interfaces/shared/errors";
 import { buscarAuxiliarPorDNISelect } from "../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorDNI";
 
 // Middleware para verificar si el usuario es un Auxiliar

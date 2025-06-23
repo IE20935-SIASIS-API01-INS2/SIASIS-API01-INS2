@@ -2,8 +2,8 @@
 import { Router } from "express";
 
 import { UserAuthenticatedAPI01 } from "../interfaces/shared/JWTPayload";
-import AllErrorTypes from "../interfaces/shared/apis/errors";
-import { ErrorDetails } from "../interfaces/shared/apis/errors/details";
+import AllErrorTypes from "../interfaces/shared/errors";
+import { ErrorDetails } from "../interfaces/shared/errors/details";
 import isDirectivoAuthenticated from "../middlewares/isDirectivoAuthenticated";
 import checkAuthentication from "../middlewares/checkAuthentication";
 
@@ -24,7 +24,7 @@ import { RolesSistema } from "../interfaces/shared/RolesSistema";
 import { RDP02 } from "../interfaces/shared/RDP02Instancias";
 import { RDP03 } from "../interfaces/shared/RDP03Instancias";
 import PersonalRouter from "./api/personal/index";
-import UsuarioGenericoRouter from "./api/usuario-generico";
+import UsuarioGenericoRouter from "./api/usuarios-genericos";
 import EventosRouter from "./api/eventos";
 
 const router = Router();
@@ -94,7 +94,7 @@ router.use(
 
 router.use("/personal", decodedRol as any, PersonalRouter);
 
-router.use("/usuario-generico", decodedRol as any, UsuarioGenericoRouter);
+router.use("/usuarios-genericos", decodedRol as any, UsuarioGenericoRouter);
 
 router.use("/eventos", decodedRol as any, EventosRouter);
 

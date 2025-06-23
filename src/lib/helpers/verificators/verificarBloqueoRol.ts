@@ -4,11 +4,11 @@ import { PrismaClient } from "@prisma/client";
 import { RolesSistema } from "../../../interfaces/shared/RolesSistema";
 import { RolesTexto } from "../../../../assets/RolesTextosEspañol";
 
-import { ErrorObjectGeneric } from "../../../interfaces/shared/apis/errors/details";
+import { ErrorObjectGeneric } from "../../../interfaces/shared/errors/details";
 import {
   PermissionErrorTypes,
   SystemErrorTypes,
-} from "../../../interfaces/shared/apis/errors";
+} from "../../../interfaces/shared/errors";
 
 const prisma = new PrismaClient();
 

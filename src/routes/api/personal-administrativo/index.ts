@@ -6,7 +6,7 @@ import {
   SystemErrorTypes,
   UserErrorTypes,
   ValidationErrorTypes,
-} from "../../../interfaces/shared/apis/errors";
+} from "../../../interfaces/shared/errors";
 import { validateDNI } from "../../../lib/helpers/validators/data/validateDNI";
 import {
   GetPersonalAdministrativoSuccessResponse,

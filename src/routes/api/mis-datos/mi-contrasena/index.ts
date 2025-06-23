@@ -8,7 +8,7 @@ import {
   TokenErrorTypes,
   UserErrorTypes,
   ValidationErrorTypes,
-} from "../../../../interfaces/shared/apis/errors";
+} from "../../../../interfaces/shared/errors";
 import { RolesTexto } from "../../../../../assets/RolesTextosEspañol";
 import {
   AuxiliarAuthenticated,

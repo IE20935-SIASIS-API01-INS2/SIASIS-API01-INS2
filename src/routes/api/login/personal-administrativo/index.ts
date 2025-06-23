@@ -8,9 +8,9 @@ import {
   LoginBody,
   ResponseSuccessLogin,
 } from "../../../../interfaces/shared/apis/shared/login/types";
-import { AuthBlockedDetails } from "../../../../interfaces/shared/apis/errors/details/AuthBloquedDetails";
+import { AuthBlockedDetails } from "../../../../interfaces/shared/errors/details/AuthBloquedDetails";
 import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
-import { PermissionErrorTypes, RequestErrorTypes, SystemErrorTypes, UserErrorTypes } from "../../../../interfaces/shared/apis/errors";
+import { PermissionErrorTypes, RequestErrorTypes, SystemErrorTypes, UserErrorTypes } from "../../../../interfaces/shared/errors";
 import { verificarBloqueoRolPersonalAdministrativo } from "../../../../../core/databases/queries/RDP02/bloqueo-roles/verficarBloqueoRolPersonalAdministrativo";
 import { buscarPersonalAdministrativoPorNombreUsuarioSelect } from "../../../../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorNombreDeUsuario";
 

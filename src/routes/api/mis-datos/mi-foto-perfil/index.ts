@@ -7,7 +7,7 @@ import {
   RequestErrorTypes,
   SystemErrorTypes,
   TokenErrorTypes,
-} from "../../../../interfaces/shared/apis/errors";
+} from "../../../../interfaces/shared/errors";
 import { RolesTexto } from "../../../../../assets/RolesTextosEspañol";
 import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
 import { validateImageType } from "../../../../lib/helpers/validators/images/validateImageType";

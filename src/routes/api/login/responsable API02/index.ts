@@ -4,7 +4,7 @@ import { generateResponsableToken } from "../../../../lib/helpers/functions/jwt/
 import { verifyResponsablePassword } from "../../../../lib/helpers/encriptations/responsable.encriptation";
 import { RolesSistema } from "../../../../interfaces/shared/RolesSistema";
 import { ResponseSuccessLogin } from "../../../../interfaces/shared/apis/shared/login/types";
-import { AuthBlockedDetails } from "../../../../interfaces/shared/apis/errors/details/AuthBloquedDetails";
+import { AuthBlockedDetails } from "../../../../interfaces/shared/errors/details/AuthBloquedDetails";
 
 const router = Router();
 const prisma = new PrismaClient();

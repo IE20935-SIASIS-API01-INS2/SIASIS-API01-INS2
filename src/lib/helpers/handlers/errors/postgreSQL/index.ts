@@ -1,4 +1,4 @@
-import { ValidationErrorTypes } from "../../../../../interfaces/shared/apis/errors";
+import { ValidationErrorTypes } from "../../../../../interfaces/shared/errors";
 import { ErrorResponseAPIBase } from "../../../../../interfaces/shared/apis/types";
 
 

@@ -8,29 +8,29 @@ import {
   SystemErrorTypes,
   UserErrorTypes,
   DataErrorTypes,
-} from "../../../../interfaces/shared/apis/errors";
+} from "../../../../interfaces/shared/errors";
 
 import wereObligatoryQueryParamsReceived from "../../../../middlewares/wereObligatoryQueryParamsReceived";
-import { buscarUsuarioGenericoPorRolYDNI } from "../../../../../core/databases/queries/RDP02/usuario-generico/buscarUsuarioGenericoPorRolYDNI";
 import { buscarAsistenciaMensualPorRol } from "../../../../../core/databases/queries/RDP02/asistencias-mensuales/buscarAsistenciaMensualPorRolDNI";
 import {
   AsistenciaCompletaMensualDePersonal,
   GetAsistenciaMensualDePersonalSuccessResponse,
 } from "../../../../interfaces/shared/apis/api01/personal/types";
+import { buscarUsuarioGenericoPorRolyIDoDNI } from "../../../../../core/databases/queries/RDP02/usuarios-genericos/buscarUsuarioGenericoPorRolyIDoDNI";
 
 const AsistenciasMensualesDePersonalRouter = Router();
 
 AsistenciasMensualesDePersonalRouter.get(
   "/",
-  wereObligatoryQueryParamsReceived(["Rol", "DNI", "Mes"]) as any,
+  wereObligatoryQueryParamsReceived(["Rol", "ID_O_DNI", "Mes"]) as any,
   (async (req: Request, res: Response) => {
     try {
-      const { Rol, DNI, Mes } = req.query;
+      const { Rol, ID_O_DNI, Mes } = req.query;
       const rdp02EnUso = req.RDP02_INSTANCE!;
 
       // Convertir a tipos apropiados
       const rol = Rol as string;
-      const dni = DNI as string;
+      const idODni = ID_O_DNI as string;
       const mes = parseInt(Mes as string);
 
       // Validar que el rol es válido
@@ -44,7 +44,7 @@ AsistenciasMensualesDePersonalRouter.get(
       }
 
       // Validar formato del DNI (8 dígitos)
-      if (!/^\d{8}$/.test(dni)) {
+      if (rol !== RolesSistema.Directivo && !/^\d{8}$/.test(idODni)) {
         return res.status(400).json({
           success: false,
           message: "El DNI debe tener exactamente 8 dígitos numéricos",
@@ -62,10 +62,7 @@ AsistenciasMensualesDePersonalRouter.get(
       }
 
       // Validar que el rol tiene control de asistencia
-      const rolesSinAsistencia = [
-        RolesSistema.Directivo,
-        RolesSistema.Responsable,
-      ];
+      const rolesSinAsistencia = [RolesSistema.Responsable];
       if (rolesSinAsistencia.includes(rol as RolesSistema)) {
         return res.status(400).json({
           success: false,
@@ -75,16 +72,16 @@ AsistenciasMensualesDePersonalRouter.get(
       }
 
       // Buscar datos básicos del personal
-      const personalData = await buscarUsuarioGenericoPorRolYDNI(
+      const personalData = await buscarUsuarioGenericoPorRolyIDoDNI(
         rol as RolesSistema,
-        dni,
+        idODni,
         rdp02EnUso
       );
 
       if (!personalData) {
         return res.status(404).json({
           success: false,
-          message: `No se encontró personal con rol "${rol}" y DNI "${dni}", o el usuario está inactivo`,
+          message: `No se encontró personal con rol "${rol}" y DNI "${idODni}", o el usuario está inactivo`,
           errorType: UserErrorTypes.USER_NOT_FOUND,
         } as ErrorResponseAPIBase);
       }
@@ -92,7 +89,7 @@ AsistenciasMensualesDePersonalRouter.get(
       // Buscar asistencias del mes
       const asistenciasData = await buscarAsistenciaMensualPorRol(
         rol as RolesSistema,
-        dni,
+        idODni,
         mes,
         rdp02EnUso
       );
@@ -110,9 +107,10 @@ AsistenciasMensualesDePersonalRouter.get(
         Id_Registro_Mensual_Entrada:
           asistenciasData.Id_Registro_Mensual_Entrada,
         Id_Registro_Mensual_Salida: asistenciasData.Id_Registro_Mensual_Salida,
-        DNI_Usuario: personalData.DNI_Usuario,
+        ID_O_DNI_Usuario: personalData.ID_O_DNI_Usuario,
         Rol: personalData.Rol,
         Nombres: personalData.Nombres,
+        Google_Drive_Foto_ID: personalData.Google_Drive_Foto_ID,
         Apellidos: personalData.Apellidos,
         Genero: personalData.Genero,
         Entradas: asistenciasData.Entradas,

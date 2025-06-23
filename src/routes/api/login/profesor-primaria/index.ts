@@ -8,14 +8,14 @@ import {
   LoginBody,
   ResponseSuccessLogin,
 } from "../../../../interfaces/shared/apis/shared/login/types";
-import { AuthBlockedDetails } from "../../../../interfaces/shared/apis/errors/details/AuthBloquedDetails";
+import { AuthBlockedDetails } from "../../../../interfaces/shared/errors/details/AuthBloquedDetails";
 
 import {
   RequestErrorTypes,
   UserErrorTypes,
   PermissionErrorTypes,
   SystemErrorTypes,
-} from "../../../../interfaces/shared/apis/errors";
+} from "../../../../interfaces/shared/errors";
 import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
 import { verificarBloqueoRolProfesorPrimaria } from "../../../../../core/databases/queries/RDP02/bloqueo-roles/verificarBloqueoRolProfesorPrimaria";
 import { buscarProfesorPrimariaPorNombreUsuarioSelect } from "../../../../../core/databases/queries/RDP02/profesor-primaria/buscarProfesorPrimariaPorNombreDeUsuario";

@@ -43,7 +43,7 @@ import {
   SystemErrorTypes,
   TokenErrorTypes,
   UserErrorTypes,
-} from "../../../interfaces/shared/apis/errors";
+} from "../../../interfaces/shared/errors";
 
 // Importar funciones de consulta a la base de datos
 import { buscarDirectivoPorIdSelect } from "../../../../core/databases/queries/RDP02/directivos/buscarDirectivoPorId";

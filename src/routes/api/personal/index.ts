@@ -19,6 +19,7 @@ PersonalRouter.use(
 );
 PersonalRouter.use(
   "/mis-asistencias",
+  isDirectivoAuthenticated,
   isProfesorPrimariaAuthenticated,
   isAuxiliarAuthenticated,
   isProfesorSecundariaAuthenticated,
