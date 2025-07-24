@@ -54,3 +54,18 @@ export async function buscarEventosPorMes(
 
   return result.rows;
 }
+
+export function verificarConflictoConEventos(
+    fechaInicio: Date,
+    fechaFin: Date,
+    eventos: T_Eventos[]
+): T_Eventos[] {
+    return eventos.filter(evento => {
+        const inicioEvento = new Date(evento.Fecha_Inicio);
+        const finEvento = new Date(evento.Fecha_Conclusion);
+
+        return (
+            (inicioEvento <= fechaFin && finEvento >= fechaInicio) // Cualquier traslape
+        );
+    });
+}
