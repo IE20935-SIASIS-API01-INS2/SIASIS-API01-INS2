@@ -1,4 +1,3 @@
-// routes/index.ts
 import { Router } from "express";
 
 import { UserAuthenticatedAPI01 } from "../interfaces/shared/JWTPayload";
@@ -12,7 +11,6 @@ import misDatosRouter from "./api/mis-datos";
 import auxiliaresRouter from "./api/auxiliares";
 import personalAdministrativoRouter from "./api/personal-administrativo";
 import modificacionesTablasRouter from "./api/modificaciones-tablas";
-// import asistenciaRouter from "./api/asistencia-diaria";
 
 import isAuxiliarAuthenticated from "../middlewares/isAuxiliarAuthenticated";
 import isProfesorPrimariaAuthenticated from "../middlewares/isProfesorPrimariaAuthenticated";

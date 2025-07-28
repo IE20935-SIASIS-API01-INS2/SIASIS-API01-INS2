@@ -1,5 +1,5 @@
 // src/routes/auth/login/directivo/index.ts
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { generateDirectivoToken } from "../../../../lib/helpers/functions/jwt/generators/directivoToken";
 import { verifyDirectivoPassword } from "../../../../lib/helpers/encriptations/directivo.encriptation";
 import { RolesSistema } from "../../../../interfaces/shared/RolesSistema";
@@ -8,15 +8,12 @@ import {
   LoginBody,
   ResponseSuccessLogin,
 } from "../../../../interfaces/shared/apis/shared/login/types";
-import { AuthBlockedDetails } from "../../../../interfaces/shared/errors/details/AuthBloquedDetails";
-
 import {
   RequestErrorTypes,
   UserErrorTypes,
-  PermissionErrorTypes,
   SystemErrorTypes,
 } from "../../../../interfaces/shared/errors";
-import { verificarBloqueoRolDirectivo } from "../../../../../core/databases/queries/RDP02/bloqueo-roles/verificarBloqueoRolDirectivo";
+import { verificarBloqueoRol } from "../../../../lib/helpers/verificators/verificarBloqueoRol";
 import { buscarDirectivoPorNombreUsuarioSelect } from "../../../../../core/databases/queries/RDP02/directivos/buscarDirectivosPorNombreDeUsuario";
 import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
 
@@ -27,7 +24,7 @@ router.get("/", (async (req: Request, res: Response) => {
 }) as any);
 
 // Ruta de login
-router.post("/", (async (req: Request, res: Response) => {
+router.post("/", (async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { Nombre_Usuario, Contraseña }: LoginBody = req.body;
 
@@ -43,56 +40,19 @@ router.post("/", (async (req: Request, res: Response) => {
 
     // Verificar si el rol de directivo está bloqueado
     try {
-      // Verificar bloqueo total
-      const bloqueoRol = await verificarBloqueoRolDirectivo();
+      const bloqueoRol = await verificarBloqueoRol(
+        req,
+        RolesSistema.Directivo,
+        next
+      );
 
-      // Si hay bloqueo, generar mensaje detallado
+      // Si hay bloqueo, el error ya está configurado en req.authError
       if (bloqueoRol) {
-        const tiempoActual = Math.floor(Date.now() / 1000);
-        const timestampDesbloqueo = Number(bloqueoRol.Timestamp_Desbloqueo);
-
-        // Determinamos si es un bloqueo permanente (timestamp = 0 o en el pasado)
-        const esBloqueoPermanente =
-          timestampDesbloqueo <= 0 || timestampDesbloqueo <= tiempoActual;
-
-        // Calculamos el tiempo restante solo si NO es un bloqueo permanente
-        let tiempoRestante = "Permanente";
-        let fechaFormateada = "No definida";
-
-        if (!esBloqueoPermanente) {
-          const tiempoRestanteSegundos = timestampDesbloqueo - tiempoActual;
-          const horasRestantes = Math.floor(tiempoRestanteSegundos / 3600);
-          const minutosRestantes = Math.floor(
-            (tiempoRestanteSegundos % 3600) / 60
-          );
-          tiempoRestante = `${horasRestantes}h ${minutosRestantes}m`;
-
-          // Formatear fecha de desbloqueo
-          const fechaDesbloqueo = new Date(timestampDesbloqueo * 1000);
-          fechaFormateada = fechaDesbloqueo.toLocaleString("es-ES", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-        }
-
-        const errorDetails: AuthBlockedDetails = {
-          tiempoActualUTC: tiempoActual,
-          timestampDesbloqueoUTC: timestampDesbloqueo,
-          tiempoRestante: tiempoRestante,
-          fechaDesbloqueo: fechaFormateada,
-          esBloqueoPermanente: esBloqueoPermanente,
-        };
-
         const errorResponse: ErrorResponseAPIBase = {
           success: false,
-          message: esBloqueoPermanente
-            ? "El acceso para directivos está permanentemente bloqueado"
-            : "El acceso para directivos está temporalmente bloqueado",
-          errorType: PermissionErrorTypes.ROLE_BLOCKED,
-          details: errorDetails,
+          message: req.authError?.message || "El acceso está bloqueado",
+          errorType: req.authError?.type || SystemErrorTypes.UNKNOWN_ERROR,
+          details: req.authError?.details,
         };
 
         return res.status(403).json(errorResponse);
@@ -133,8 +93,6 @@ router.post("/", (async (req: Request, res: Response) => {
     );
 
     if (!isContraseñaValid) {
-      // Aquí podrías implementar un contador de intentos fallidos
-      // y si supera cierto límite, bloquear temporalmente
       const errorResponse: ErrorResponseAPIBase = {
         success: false,
         message: "Credenciales inválidas",

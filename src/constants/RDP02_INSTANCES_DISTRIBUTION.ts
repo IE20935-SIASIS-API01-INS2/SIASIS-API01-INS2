@@ -1,6 +1,7 @@
 import { Entorno } from "../interfaces/shared/Entornos";
 import { RDP02 } from "../interfaces/shared/RDP02Instancias";
 import { ENTORNO } from "./ENTORNO";
+import "dotenv/config";
 
 // Definición de las instancias de RDP02
 export const DIRECTIVO_INSTANCES =

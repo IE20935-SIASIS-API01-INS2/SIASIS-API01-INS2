@@ -1,98 +1,131 @@
 // verificarBloqueoRol.ts
 import { Request, NextFunction } from "express";
-import { PrismaClient } from "@prisma/client";
+import { T_Bloqueo_Roles } from "@prisma/client";
+import { RDP02 } from "../../../interfaces/shared/RDP02Instancias";
 import { RolesSistema } from "../../../interfaces/shared/RolesSistema";
 import { RolesTexto } from "../../../../assets/RolesTextosEspañol";
-
 import { ErrorObjectGeneric } from "../../../interfaces/shared/errors/details";
 import {
   PermissionErrorTypes,
   SystemErrorTypes,
 } from "../../../interfaces/shared/errors";
-
-const prisma = new PrismaClient();
+import { AuthBlockedDetails } from "../../../interfaces/shared/errors/details/AuthBloquedDetails";
+import { query } from "../../../../core/databases/connectors/postgres";
 
 /**
- * Verifica si un rol está bloqueado y configura el error correspondiente
+ * Consulta la base de datos para verificar si un rol está bloqueado
+ * @param rol - Rol a verificar
+ * @param instanciaEnUso - Instancia específica donde ejecutar la consulta (opcional)
+ * @returns Información del bloqueo o null si no existe
+ */
+export async function consultarBloqueoRol(
+  rol: RolesSistema,
+  instanciaEnUso?: RDP02
+): Promise<T_Bloqueo_Roles | null> {
+  const sql = `
+    SELECT *
+    FROM "T_Bloqueo_Roles"
+    WHERE "Rol" = $1 
+    AND (
+      "Bloqueo_Total" = true 
+      OR "Timestamp_Desbloqueo" > $2
+    )
+  `;
+
+  const tiempoActualUnix = Math.floor(Date.now() / 1000);
+
+  const result = await query<T_Bloqueo_Roles>(instanciaEnUso, sql, [
+    rol,
+    tiempoActualUnix,
+  ]);
+
+  return result.rows.length > 0 ? result.rows[0] : null;
+}
+
+/**
+ * Verifica si un rol está bloqueado y configura el error correspondiente en el middleware
  * @param req - Objeto Request de Express
  * @param rol - Rol a verificar (del enum RolesSistema)
  * @param next - Función NextFunction de Express
- * @returns Promesa<boolean> - true si está bloqueado, false si no
+ * @param instanciaEnUso - Instancia específica donde ejecutar la consulta (opcional)
+ * @returns Promise<boolean> - true si está bloqueado, false si no
  */
 export async function verificarBloqueoRol(
   req: Request,
   rol: RolesSistema,
-  next: NextFunction
+  next: NextFunction,
+  instanciaEnUso?: RDP02
 ): Promise<boolean> {
   try {
-    const bloqueo = await prisma.t_Bloqueo_Roles.findFirst({
-      where: {
-        Rol: rol,
-        OR: [
-          {
-            Timestamp_Desbloqueo: {
-              gt: Math.floor(Date.now() / 1000),
-            },
-          },
-          {
-            Bloqueo_Total: true,
-          },
-        ],
-      },
-    });
+    const bloqueo = await consultarBloqueoRol(rol, instanciaEnUso);
 
     if (bloqueo) {
-      const ahora = new Date();
-      const tiempoDesbloqueo = bloqueo.Timestamp_Desbloqueo
-        ? new Date(Number(bloqueo.Timestamp_Desbloqueo) * 1000)
-        : null;
+      const tiempoActualUnix = Math.floor(Date.now() / 1000);
+      const timestampDesbloqueo = Number(bloqueo.Timestamp_Desbloqueo);
 
-      const tiempoRestante = tiempoDesbloqueo
-        ? Math.ceil(
-            (tiempoDesbloqueo.getTime() - ahora.getTime()) / (1000 * 60)
-          )
-        : null;
+      // Determinar si es bloqueo permanente
+      const esBloqueoPermanente =
+        bloqueo.Bloqueo_Total ||
+        timestampDesbloqueo <= 0 ||
+        timestampDesbloqueo <= tiempoActualUnix;
 
-      // Obtener el nombre plural del rol desde el objeto RolesTexto
-      const nombreRolPlural = RolesTexto[rol].plural.toLowerCase();
+      // Calcular tiempo restante solo si NO es permanente
+      let tiempoRestante = "Permanente";
+      let fechaFormateada = "No definida";
+
+      if (!esBloqueoPermanente) {
+        const tiempoRestanteSegundos = timestampDesbloqueo - tiempoActualUnix;
+        const horasRestantes = Math.floor(tiempoRestanteSegundos / 3600);
+        const minutosRestantes = Math.floor(
+          (tiempoRestanteSegundos % 3600) / 60
+        );
+        tiempoRestante = `${horasRestantes}h ${minutosRestantes}m`;
+
+        // Formatear fecha de desbloqueo
+        const fechaDesbloqueo = new Date(timestampDesbloqueo * 1000);
+        fechaFormateada = fechaDesbloqueo.toLocaleString("es-ES", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      // Obtener nombre del rol en plural
+      const nombreRolPlural =
+        RolesTexto[rol]?.plural?.toLowerCase() || "usuarios";
+
+      const errorDetails: AuthBlockedDetails = {
+        tiempoActualUTC: tiempoActualUnix,
+        timestampDesbloqueoUTC: timestampDesbloqueo,
+        tiempoRestante: tiempoRestante,
+        fechaDesbloqueo: fechaFormateada,
+        esBloqueoPermanente: esBloqueoPermanente,
+      };
 
       req.authError = {
         type: PermissionErrorTypes.ROLE_BLOCKED,
-        message: bloqueo.Bloqueo_Total
-          ? `Acceso permanentemente bloqueado para ${nombreRolPlural}. Contacte al administrador del sistema.`
-          : `Acceso temporalmente bloqueado para ${nombreRolPlural}. Intente nuevamente más tarde.`,
-        details: {
-          esBloqueoPermanente: bloqueo.Bloqueo_Total,
-          tiempoDesbloqueo: tiempoDesbloqueo?.toISOString(),
-          tiempoRestanteMinutos: tiempoRestante,
-          tiempoRestanteFormateado: tiempoRestante
-            ? tiempoRestante > 60
-              ? `${Math.floor(tiempoRestante / 60)} horas y ${
-                  tiempoRestante % 60
-                } minutos`
-              : `${tiempoRestante} minutos`
-            : "Indefinido",
-          fechaActual: ahora.toISOString(),
-          fechaDesbloqueo: tiempoDesbloqueo?.toLocaleDateString("es-ES", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        },
+        message: esBloqueoPermanente
+          ? `El acceso para ${nombreRolPlural} está permanentemente bloqueado`
+          : `El acceso para ${nombreRolPlural} está temporalmente bloqueado`,
+        details: errorDetails,
       };
+
       next();
       return true;
     }
+
     return false;
   } catch (error) {
+    console.error("Error al verificar bloqueo de rol:", error);
+
     req.authError = {
       type: SystemErrorTypes.DATABASE_ERROR,
       message: "Error al verificar el estado del rol",
       details: error as ErrorObjectGeneric,
     };
     next();
-    return true; // Consideramos que hay bloqueo en caso de error para ser conservadores
+    return true; // Conservador: asumir bloqueo en caso de error
   }
 }

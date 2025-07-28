@@ -1,5 +1,4 @@
-// src/routes/auth/login/auxiliar/index.ts
-import { Request, Response, Router } from "express";
+import { Request, Response, Router, NextFunction } from "express";
 import { generateAuxiliarToken } from "../../../../lib/helpers/functions/jwt/generators/auxiliarToken";
 import { verifyAuxiliarPassword } from "../../../../lib/helpers/encriptations/auxiliar.encriptation";
 import { RolesSistema } from "../../../../interfaces/shared/RolesSistema";
@@ -8,16 +7,13 @@ import {
   LoginBody,
   ResponseSuccessLogin,
 } from "../../../../interfaces/shared/apis/shared/login/types";
-import { AuthBlockedDetails } from "../../../../interfaces/shared/errors/details/AuthBloquedDetails";
-
 import {
   RequestErrorTypes,
   UserErrorTypes,
-  PermissionErrorTypes,
   SystemErrorTypes,
 } from "../../../../interfaces/shared/errors";
 import { ErrorResponseAPIBase } from "../../../../interfaces/shared/apis/types";
-import { verificarBloqueoRolAuxiliar } from "../../../../../core/databases/queries/RDP02/bloqueo-roles/verificarBloqueoRolAuxiliar";
+import { verificarBloqueoRol } from "../../../../lib/helpers/verificators/verificarBloqueoRol";
 import { buscarAuxiliarPorNombreUsuarioSelect } from "../../../../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorNombreDeUsuario";
 
 const router = Router();
@@ -27,7 +23,7 @@ router.get("/", (async (req: Request, res: Response) => {
 }) as any);
 
 // Ruta de login para Auxiliares
-router.post("/", (async (req: Request, res: Response) => {
+router.post("/", (async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { Nombre_Usuario, Contraseña }: LoginBody = req.body;
 
@@ -43,54 +39,15 @@ router.post("/", (async (req: Request, res: Response) => {
 
     // Verificar si el rol de auxiliar está bloqueado
     try {
-      const bloqueoRol = await verificarBloqueoRolAuxiliar();
+      const bloqueoRol = await verificarBloqueoRol(req, RolesSistema.Auxiliar, next);
 
+      // Si hay bloqueo, el error ya está configurado en req.authError
       if (bloqueoRol) {
-        const tiempoActual = Math.floor(Date.now() / 1000);
-        const timestampDesbloqueo = Number(bloqueoRol.Timestamp_Desbloqueo);
-
-        // Determinamos si es un bloqueo permanente (timestamp = 0 o en el pasado)
-        const esBloqueoPermanente =
-          timestampDesbloqueo <= 0 || timestampDesbloqueo <= tiempoActual;
-
-        // Calculamos el tiempo restante solo si NO es un bloqueo permanente
-        let tiempoRestante = "Permanente";
-        let fechaFormateada = "No definida";
-
-        if (!esBloqueoPermanente) {
-          const tiempoRestanteSegundos = timestampDesbloqueo - tiempoActual;
-          const horasRestantes = Math.floor(tiempoRestanteSegundos / 3600);
-          const minutosRestantes = Math.floor(
-            (tiempoRestanteSegundos % 3600) / 60
-          );
-          tiempoRestante = `${horasRestantes}h ${minutosRestantes}m`;
-
-          // Formatear fecha de desbloqueo
-          const fechaDesbloqueo = new Date(timestampDesbloqueo * 1000);
-          fechaFormateada = fechaDesbloqueo.toLocaleString("es-ES", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-        }
-
-        const errorDetails: AuthBlockedDetails = {
-          tiempoActualUTC: tiempoActual,
-          timestampDesbloqueoUTC: timestampDesbloqueo,
-          tiempoRestante: tiempoRestante,
-          fechaDesbloqueo: fechaFormateada,
-          esBloqueoPermanente: esBloqueoPermanente,
-        };
-
         const errorResponse: ErrorResponseAPIBase = {
           success: false,
-          message: esBloqueoPermanente
-            ? "El acceso para auxiliares está permanentemente bloqueado"
-            : "El acceso para auxiliares está temporalmente bloqueado",
-          errorType: PermissionErrorTypes.ROLE_BLOCKED,
-          details: errorDetails,
+          message: req.authError?.message || "El acceso está bloqueado",
+          errorType: req.authError?.type || SystemErrorTypes.UNKNOWN_ERROR,
+          details: req.authError?.details,
         };
 
         return res.status(403).json(errorResponse);

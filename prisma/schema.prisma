@@ -310,8 +310,7 @@ model T_Control_Salida_Mensual_Directivos {
 }
 
 model T_Bloqueo_Roles {
-  Id_Bloqueo_Rol       Int     @id @default(autoincrement())
-  Rol                  String  @db.VarChar(2) // Reemplazado ENUM por VARCHAR(2)
+  Rol                  String  @id @db.VarChar(3)
   Bloqueo_Total        Boolean
   Timestamp_Desbloqueo BigInt // Timestamp Unix para el desbloqueo
 
