@@ -5,28 +5,28 @@ import { T_Personal_Administrativo } from "@prisma/client";
 
 /**
  * Cambia el estado (activo/inactivo) de un miembro del personal administrativo
- * @param dniPersonal DNI del personal administrativo a modificar
+ * @param idPersonal ID del personal administrativo a modificar
  * @param nuevoEstado Nuevo estado (opcional). Si no se proporciona, invierte el estado actual
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos actualizados del personal administrativo o null si no se encuentra
  */
 export async function cambiarEstadoPersonalAdministrativo(
-  dniPersonal: string,
+  idPersonal: string,
   nuevoEstado?: boolean,
   instanciaEnUso?: RDP02
-): Promise<Pick<T_Personal_Administrativo, "DNI_Personal_Administrativo" | "Nombres" | "Apellidos" | "Estado"> | null> {
+): Promise<Pick<T_Personal_Administrativo, "Id_Personal_Administrativo" | "Nombres" | "Apellidos" | "Estado"> | null> {
   try {
     // Primero, verificamos si el personal administrativo existe y obtenemos su estado actual
     const sqlConsulta = `
-      SELECT "DNI_Personal_Administrativo", "Estado", "Nombres", "Apellidos"
+      SELECT "Id_Personal_Administrativo", "Estado", "Nombres", "Apellidos"
       FROM "T_Personal_Administrativo"
-      WHERE "DNI_Personal_Administrativo" = $1
+      WHERE "Id_Personal_Administrativo" = $1
     `;
 
-    const resultConsulta = await query<Pick<T_Personal_Administrativo, "DNI_Personal_Administrativo" | "Estado" | "Nombres" | "Apellidos">>(
+    const resultConsulta = await query<Pick<T_Personal_Administrativo, "Id_Personal_Administrativo" | "Estado" | "Nombres" | "Apellidos">>(
       instanciaEnUso,
       sqlConsulta,
-      [dniPersonal]
+      [idPersonal]
     );
 
     // Si no encontramos el personal administrativo, retornamos null
@@ -43,14 +43,14 @@ export async function cambiarEstadoPersonalAdministrativo(
     const sqlUpdate = `
       UPDATE "T_Personal_Administrativo"
       SET "Estado" = $1
-      WHERE "DNI_Personal_Administrativo" = $2
-      RETURNING "DNI_Personal_Administrativo", "Nombres", "Apellidos", "Estado"
+      WHERE "Id_Personal_Administrativo" = $2
+      RETURNING "Id_Personal_Administrativo", "Nombres", "Apellidos", "Estado"
     `;
 
-    const resultUpdate = await query<Pick<T_Personal_Administrativo, "DNI_Personal_Administrativo" | "Nombres" | "Apellidos" | "Estado">>(
+    const resultUpdate = await query<Pick<T_Personal_Administrativo, "Id_Personal_Administrativo" | "Nombres" | "Apellidos" | "Estado">>(
       instanciaEnUso,
       sqlUpdate,
-      [estadoFinal, dniPersonal]
+      [estadoFinal, idPersonal]
     );
 
     // Retornamos los datos actualizados

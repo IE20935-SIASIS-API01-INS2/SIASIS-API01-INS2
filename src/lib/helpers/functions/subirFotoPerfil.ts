@@ -46,7 +46,7 @@ export async function subirFotoPerfil(
       },
       [RolesSistema.Auxiliar]: {
         tabla: "T_Auxiliares",
-        campo: "DNI_Auxiliar",
+        campo: "Id_Auxiliar",
         campoDrive: "Google_Drive_Foto_ID",
         campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Auxiliares",
@@ -55,7 +55,7 @@ export async function subirFotoPerfil(
       },
       [RolesSistema.ProfesorPrimaria]: {
         tabla: "T_Profesores_Primaria",
-        campo: "DNI_Profesor_Primaria",
+        campo: "Id_Profesor_Primaria",
         campoDrive: "Google_Drive_Foto_ID",
         campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Profesores Primaria",
@@ -64,7 +64,7 @@ export async function subirFotoPerfil(
       },
       [RolesSistema.ProfesorSecundaria]: {
         tabla: "T_Profesores_Secundaria",
-        campo: "DNI_Profesor_Secundaria",
+        campo: "Id_Profesor_Secundaria",
         campoDrive: "Google_Drive_Foto_ID",
         campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Profesores Secundaria",
@@ -73,7 +73,7 @@ export async function subirFotoPerfil(
       },
       [RolesSistema.Tutor]: {
         tabla: "T_Profesores_Secundaria",
-        campo: "DNI_Profesor_Secundaria",
+        campo: "Id_Profesor_Secundaria",
         campoDrive: "Google_Drive_Foto_ID",
         campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Profesores Secundaria",
@@ -82,7 +82,7 @@ export async function subirFotoPerfil(
       },
       [RolesSistema.PersonalAdministrativo]: {
         tabla: "T_Personal_Administrativo",
-        campo: "DNI_Personal_Administrativo",
+        campo: "Id_Personal_Administrativo",
         campoDrive: "Google_Drive_Foto_ID",
         campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Personal Administrativo",
@@ -91,7 +91,7 @@ export async function subirFotoPerfil(
       },
       [RolesSistema.Responsable]: {
         tabla: "T_Responsables",
-        campo: "DNI_Responsable",
+        campo: "Id_Responsable",
         campoDrive: "Google_Drive_Foto_ID",
         campoUsuario: "Nombre_Usuario",
         carpeta: "Fotos de Perfil/Responsables",
@@ -100,7 +100,7 @@ export async function subirFotoPerfil(
       },
       [ActoresSistema.Estudiante]: {
         tabla: "T_Estudiantes",
-        campo: "DNI_Estudiante",
+        campo: "Id_Estudiante",
         campoDrive: "Google_Drive_Foto_ID",
         campoUsuario: "",
         carpeta: "Fotos de Perfil/Estudiantes",
@@ -164,7 +164,6 @@ export async function subirFotoPerfil(
       // Si se provee un nombre específico, usar ese
       archivoFinal = `${nombreArchivo}.${extension}`;
     } else if (actorTipo === ActoresSistema.Estudiante) {
-      // Para estudiantes, usar el DNI
       archivoFinal = `estudiante_${idValor}.${extension}`;
     } else {
       // Para otros roles, usar el nombre de usuario

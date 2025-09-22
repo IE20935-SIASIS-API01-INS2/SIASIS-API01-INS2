@@ -3,21 +3,21 @@ import { RDP02 } from "../../../../../src/interfaces/shared/RDP02Instancias";
 import { query } from "../../../connectors/postgres";
 
 /**
- * Verifica si existe un auxiliar con el DNI especificado
- * @param dniAuxiliar DNI del auxiliar a verificar
+ * Verifica si existe un auxiliar con el ID especificado
+ * @param idAuxiliar ID del auxiliar a verificar
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns true si existe, false si no
  */
 export async function verificarExistenciaAuxiliar(
-  dniAuxiliar: string,
+  idAuxiliar: string,
   instanciaEnUso?: RDP02
 ): Promise<boolean> {
   const sql = `
     SELECT 1 FROM "T_Auxiliares" 
-    WHERE "DNI_Auxiliar" = $1
+    WHERE "Id_Auxiliar" = $1
   `;
 
-  const result = await query(instanciaEnUso, sql, [dniAuxiliar]);
+  const result = await query(instanciaEnUso, sql, [idAuxiliar]);
 
   return result.rows.length > 0;
 }

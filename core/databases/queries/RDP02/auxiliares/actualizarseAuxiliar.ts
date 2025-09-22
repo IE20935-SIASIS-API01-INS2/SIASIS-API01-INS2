@@ -3,13 +3,13 @@ import { query } from "../../../connectors/postgres";
 
 /**
  * Actualiza los datos de un auxiliar
- * @param dniAuxiliar DNI del auxiliar a actualizar
+ * @param idAuxiliar ID del auxiliar a actualizar
  * @param datos Datos a actualizar
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns true si la actualización fue exitosa, false si no se encontró el auxiliar
  */
 export async function actualizarseAuxiliar(
-  dniAuxiliar: string,
+  idAuxiliar: string,
   datos: {
     Celular?: string;
     Correo_Electronico?: string;
@@ -34,12 +34,12 @@ export async function actualizarseAuxiliar(
   }
 
   // Añadir el identificador al final de los parámetros
-  params.push(dniAuxiliar);
+  params.push(idAuxiliar);
 
   const sql = `
     UPDATE "T_Auxiliares" 
     SET ${setClauses.join(", ")} 
-    WHERE "DNI_Auxiliar" = $${paramIndex}
+    WHERE "Id_Auxiliar" = $${paramIndex}
   `;
 
   const result = await query(instanciaEnUso, sql, params);

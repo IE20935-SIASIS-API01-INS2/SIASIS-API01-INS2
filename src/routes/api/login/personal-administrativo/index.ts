@@ -60,7 +60,7 @@ router.post("/", (async (req: Request, res: Response, next: NextFunction) => {
     // Buscar el personal administrativo por nombre de usuario con campos específicos
     const personalAdministrativo =
       await buscarPersonalAdministrativoPorNombreUsuarioSelect(Nombre_Usuario, [
-        "DNI_Personal_Administrativo",
+        "Id_Personal_Administrativo",
         "Nombre_Usuario",
         "Contraseña",
         "Nombres",
@@ -107,7 +107,7 @@ router.post("/", (async (req: Request, res: Response, next: NextFunction) => {
 
     // Generar token JWT
     const token = generatePersonalAdministrativoToken(
-      personalAdministrativo.DNI_Personal_Administrativo,
+      personalAdministrativo.Id_Personal_Administrativo,
       personalAdministrativo.Nombre_Usuario
     );
 

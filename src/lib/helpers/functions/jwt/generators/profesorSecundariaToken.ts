@@ -8,13 +8,13 @@ import { getRandomElementFromEnum } from "../../../getRandomElementFromEnum";
 
 // Función para generar un token JWT para Profesores de Secundaria
 export function generateProfesorSecundariaToken(
-  dniProfesorSecundaria: string,
+  idProfesorSecundaria: string,
   nombre_usuario: string
 ): string {
   const jwtSecretKey = process.env.JWT_KEY_PROFESORES_SECUNDARIA!;
 
   const payload: JWTPayload = {
-    ID_Usuario: dniProfesorSecundaria,
+    ID_Usuario: idProfesorSecundaria,
     Nombre_Usuario: nombre_usuario,
     RDP02_INSTANCE: getRandomElementFromEnum<RDP02>(RDP02),
     RDP03_INSTANCE: getRandomElementFromEnum<RDP03>(RDP03),

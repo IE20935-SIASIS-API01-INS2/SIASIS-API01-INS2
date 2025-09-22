@@ -100,6 +100,8 @@ router.use("/eventos", decodedRol as any, EventosRouter);
 
 router.use("/mi-horario", decodedRol as any, MiHorarioRouter);
 
+
+
 router.use(
   "/vacaciones-interescolares",
   decodedRol as any,

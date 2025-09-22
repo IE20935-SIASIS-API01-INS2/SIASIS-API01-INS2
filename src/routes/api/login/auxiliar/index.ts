@@ -61,7 +61,7 @@ router.post("/", (async (req: Request, res: Response, next: NextFunction) => {
     const auxiliar = await buscarAuxiliarPorNombreUsuarioSelect(
       Nombre_Usuario,
       [
-        "DNI_Auxiliar",
+        "Id_Auxiliar",
         "Nombre_Usuario",
         "Contraseña",
         "Nombres",
@@ -109,7 +109,7 @@ router.post("/", (async (req: Request, res: Response, next: NextFunction) => {
 
     // Generar token JWT
     const token = generateAuxiliarToken(
-      auxiliar.DNI_Auxiliar,
+      auxiliar.Id_Auxiliar,
       auxiliar.Nombre_Usuario
     );
 

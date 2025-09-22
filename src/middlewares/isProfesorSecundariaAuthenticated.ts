@@ -12,7 +12,7 @@ import {
   TokenErrorTypes,
   UserErrorTypes,
 } from "../interfaces/shared/errors";
-import { buscarProfesorSecundariaPorDNISelect } from "../../core/databases/queries/RDP02/profesor-secundaria/buscarProfesorSecundariaPorDNI";
+import { buscarProfesorSecundariaPorIdSelect } from "../../core/databases/queries/RDP02/profesor-secundaria/buscarProfesorSecundariaPorId";
 
 // Middleware para verificar si el usuario es un Profesor de Secundaria
 const isProfesorSecundariaAuthenticated = async (
@@ -103,7 +103,7 @@ const isProfesorSecundariaAuthenticated = async (
 
         // Verificar si el profesor de secundaria existe y está activo
         // Reemplazo de la llamada a Prisma por la función desacoplada
-        const profesor = await buscarProfesorSecundariaPorDNISelect(
+        const profesor = await buscarProfesorSecundariaPorIdSelect(
           decodedPayload.ID_Usuario,
           ["Estado"]
         );
@@ -127,7 +127,7 @@ const isProfesorSecundariaAuthenticated = async (
 
       // Agregar información del usuario decodificada a la solicitud para uso posterior
       req.user = {
-        DNI_Profesor_Secundaria: decodedPayload.ID_Usuario,
+        Id_Profesor_Secundaria: decodedPayload.ID_Usuario,
         Nombre_Usuario: decodedPayload.Nombre_Usuario,
       } as ProfesorTutorSecundariaAuthenticated;
 

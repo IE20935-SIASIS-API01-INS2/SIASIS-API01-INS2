@@ -13,7 +13,7 @@ export async function buscarTodosLosPersonalesAdministrativo(
 ): Promise<
   Pick<
     T_Personal_Administrativo,
-    | "DNI_Personal_Administrativo"
+    | "Id_Personal_Administrativo"
     | "Nombres"
     | "Apellidos"
     | "Genero"
@@ -26,7 +26,7 @@ export async function buscarTodosLosPersonalesAdministrativo(
 > {
   const sql = `
     SELECT 
-      "DNI_Personal_Administrativo", 
+      "Id_Personal_Administrativo", 
       "Nombres", 
       "Apellidos", 
       "Genero", 
@@ -42,7 +42,7 @@ export async function buscarTodosLosPersonalesAdministrativo(
   const result = await query<
     Pick<
       T_Personal_Administrativo,
-      | "DNI_Personal_Administrativo"
+      | "Id_Personal_Administrativo"
       | "Nombres"
       | "Apellidos"
       | "Genero"

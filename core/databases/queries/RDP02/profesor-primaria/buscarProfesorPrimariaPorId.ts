@@ -1,30 +1,30 @@
-import { T_Profesores_Secundaria } from "@prisma/client";
+import { T_Profesores_Primaria } from "@prisma/client";
 import { RDP02 } from "../../../../../src/interfaces/shared/RDP02Instancias";
 import { query } from "../../../connectors/postgres";
 import { RolesSistema } from "../../../../../src/interfaces/shared/RolesSistema";
 
 /**
- * Busca un profesor de secundaria por su DNI
- * @param dniProfesor DNI del profesor de secundaria
+ * Busca un profesor de primaria por su Id
+ * @param idProfesorPrimaria Id del profesor de primaria
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos del profesor o null si no existe
  */
-export async function buscarProfesorSecundariaPorDNI(
-  dniProfesor: string,
+export async function buscarProfesorPrimariaPorId(
+  idProfesorPrimaria: string,
   instanciaEnUso?: RDP02
-): Promise<T_Profesores_Secundaria | null> {
+): Promise<T_Profesores_Primaria | null> {
   const sql = `
     SELECT *
-    FROM "T_Profesores_Secundaria"
-    WHERE "DNI_Profesor_Secundaria" = $1
+    FROM "T_Profesores_Primaria"
+    WHERE "Id_Profesor_Primaria" = $1
   `;
 
   // Operación de lectura
-  const result = await query<T_Profesores_Secundaria>(
+  const result = await query<T_Profesores_Primaria>(
     instanciaEnUso,
     sql,
-    [dniProfesor],
-    RolesSistema.ProfesorSecundaria
+    [idProfesorPrimaria],
+    RolesSistema.ProfesorPrimaria
   );
 
   if (result.rows.length > 0) {
@@ -35,34 +35,34 @@ export async function buscarProfesorSecundariaPorDNI(
 }
 
 /**
- * Busca un profesor de secundaria por su DNI y selecciona campos específicos
- * @param dniProfesor DNI del profesor de secundaria
- * @param campos Campos específicos a seleccionar (keyof T_Profesores_Secundaria)
+ * Busca un profesor de primaria por su Id y selecciona campos específicos
+ * @param idProfesorPrimaria Id del profesor de primaria
+ * @param campos Campos específicos a seleccionar (keyof T_Profesores_Primaria)
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos parciales del profesor o null si no existe
  */
-export async function buscarProfesorSecundariaPorDNISelect<
-  K extends keyof T_Profesores_Secundaria
+export async function buscarProfesorPrimariaPorIdSelect<
+  K extends keyof T_Profesores_Primaria
 >(
-  dniProfesor: string,
+  idProfesor: string,
   campos: K[],
   instanciaEnUso?: RDP02
-): Promise<Pick<T_Profesores_Secundaria, K> | null> {
+): Promise<Pick<T_Profesores_Primaria, K> | null> {
   // Construir la consulta SQL con los campos especificados
   const camposStr = campos.map((campo) => `"${String(campo)}"`).join(", ");
 
   const sql = `
     SELECT ${camposStr}
-    FROM "T_Profesores_Secundaria"
-    WHERE "DNI_Profesor_Secundaria" = $1
+    FROM "T_Profesores_Primaria"
+    WHERE "Id_Profesor_Primaria" = $1
   `;
 
   // Operación de lectura
-  const result = await query<Pick<T_Profesores_Secundaria, K>>(
+  const result = await query<Pick<T_Profesores_Primaria, K>>(
     instanciaEnUso,
     sql,
-    [dniProfesor],
-    RolesSistema.ProfesorSecundaria
+    [idProfesor],
+    RolesSistema.ProfesorPrimaria
   );
 
   if (result.rows.length > 0) {
@@ -71,5 +71,3 @@ export async function buscarProfesorSecundariaPorDNISelect<
 
   return null;
 }
-
-

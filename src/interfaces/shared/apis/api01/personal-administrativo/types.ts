@@ -3,7 +3,7 @@ import { PersonalAdministrativoSinContraseña } from "../../shared/others/types"
 
 export type PersonalAdministrativoDataNecesariaParaCambioEstado = Pick<
   PersonalAdministrativoSinContraseña,
-  "DNI_Personal_Administrativo" | "Nombres" | "Apellidos" | "Estado"
+  "Id_Personal_Administrativo" | "Nombres" | "Apellidos" | "Estado"
 >;
 
 export interface GetPersonalAdministrativoSuccessResponse

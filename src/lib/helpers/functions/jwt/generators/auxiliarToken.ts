@@ -9,13 +9,13 @@ import { getRandomElementFromEnum } from "../../../getRandomElementFromEnum";
 
 // Función para generar un token JWT para Auxiliares
 export function generateAuxiliarToken(
-  dniAuxiliar: string,
+  idAuxiliar: string,
   nombre_usuario: string
 ): string {
   const jwtSecretKey = process.env.JWT_KEY_AUXILIARES!;
 
   const payload: JWTPayload = {
-    ID_Usuario: dniAuxiliar,
+    ID_Usuario: idAuxiliar,
     RDP02_INSTANCE: getRandomElementFromEnum<RDP02>(RDP02),
     RDP03_INSTANCE: getRandomElementFromEnum<RDP03>(RDP03),
     Nombre_Usuario: nombre_usuario,

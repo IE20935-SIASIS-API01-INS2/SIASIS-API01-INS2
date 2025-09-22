@@ -3,6 +3,7 @@ import { NivelEducativo } from "../NivelEducativo";
 import {
   T_Auxiliares,
   T_Comunicados,
+  T_Directivos,
   T_Eventos,
   T_Personal_Administrativo,
   T_Profesores_Primaria,
@@ -20,23 +21,35 @@ export interface HorarioLaboral {
   Salida: Date;
 }
 
+export type DirectivoParaTomaDeAsistencia = Pick<
+  T_Directivos,
+  | "Id_Directivo"
+  | "Identificador_Nacional"
+  | "Nombres"
+  | "Apellidos"
+  | "Genero"
+  | "Google_Drive_Foto_ID"
+> & {
+  Hora_Entrada_Dia_Actual: Date;
+  Hora_Salida_Dia_Actual: Date;
+};
+
 export type PersonalAdministrativoParaTomaDeAsistencia = Pick<
   T_Personal_Administrativo,
-  | "DNI_Personal_Administrativo"
+  | "Id_Personal_Administrativo"
   | "Genero"
   | "Nombres"
   | "Apellidos"
   | "Cargo"
   | "Google_Drive_Foto_ID"
-
-> & { 
+> & {
   Hora_Entrada_Dia_Actual: Date;
   Hora_Salida_Dia_Actual: Date;
 };
 
 export type ProfesoresPrimariaParaTomaDeAsistencia = Pick<
   T_Profesores_Primaria,
-  | "DNI_Profesor_Primaria"
+  | "Id_Profesor_Primaria"
   | "Genero"
   | "Nombres"
   | "Apellidos"
@@ -45,7 +58,7 @@ export type ProfesoresPrimariaParaTomaDeAsistencia = Pick<
 
 export type ProfesorTutorSecundariaParaTomaDeAsistencia = Pick<
   T_Profesores_Secundaria,
-  | "DNI_Profesor_Secundaria"
+  | "Id_Profesor_Secundaria"
   | "Nombres"
   | "Apellidos"
   | "Genero"
@@ -57,7 +70,7 @@ export type ProfesorTutorSecundariaParaTomaDeAsistencia = Pick<
 
 export type AuxiliaresParaTomaDeAsistencia = Pick<
   T_Auxiliares,
-  "DNI_Auxiliar" | "Nombres" | "Apellidos" | "Genero" | "Google_Drive_Foto_ID"
+  "Id_Auxiliar" | "Nombres" | "Apellidos" | "Genero" | "Google_Drive_Foto_ID"
 >;
 
 export interface RangoFechas {
@@ -83,6 +96,8 @@ export interface DatosAsistenciaHoyIE20935 {
   ListaDeProfesoresPrimaria: ProfesoresPrimariaParaTomaDeAsistencia[];
 
   ListaDeProfesoresSecundaria: ProfesorTutorSecundariaParaTomaDeAsistencia[];
+
+  ListaDeDirectivos: DirectivoParaTomaDeAsistencia[];
 
   ListaDeAuxiliares: AuxiliaresParaTomaDeAsistencia[];
 

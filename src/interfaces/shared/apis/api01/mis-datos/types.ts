@@ -39,7 +39,7 @@ export type MisDatosProfesorPrimaria = ProfesorPrimariaSinContraseña & {
   Genero: Genero;
   Aula: Omit<
     T_Aulas,
-    "DNI_Profesor_Primaria" | "DNI_Profesor_Secundaria"
+    "Id_Profesor_Primaria" | "Id_Profesor_Secundaria"
   > | null;
 };
 
@@ -62,7 +62,7 @@ export type MisDatosProfesorSecundaria = ProfesorSecundariaSinContraseña & {
  */
 export type MisDatosTutor = ProfesorSecundariaSinContraseña & {
   Genero: Genero;
-  Aula: Omit<T_Aulas, "DNI_Profesor_Primaria" | "DNI_Profesor_Secundaria">;
+  Aula: Omit<T_Aulas, "Id_Profesor_Primaria" | "Id_Profesor_Secundaria">;
 };
 
 /**
@@ -90,7 +90,7 @@ export type MisDatosErrorResponseAPI01 = ErrorResponseAPIBase;
 // -----------------------------------------
 
 export type ActualizarMisDatosDirectivoRequestBody = Partial<
-  Pick<T_Directivos, "DNI" | "Nombres" | "Apellidos" | "Genero" | "Celular">
+  Pick<T_Directivos, "Identificador_Nacional" | "Nombres" | "Apellidos" | "Genero" | "Celular">
 > & { Genero: Genero };
 
 export type ActualizarMisDatosProfesorPrimariaRequestBody = Partial<

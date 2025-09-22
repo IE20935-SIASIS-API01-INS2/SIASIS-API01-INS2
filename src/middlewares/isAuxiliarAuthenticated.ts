@@ -12,7 +12,7 @@ import {
   TokenErrorTypes,
   UserErrorTypes,
 } from "../interfaces/shared/errors";
-import { buscarAuxiliarPorDNISelect } from "../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorDNI";
+import { buscarAuxiliarPorIdSelect } from "../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorId";
 
 // Middleware para verificar si el usuario es un Auxiliar
 const isAuxiliarAuthenticated = async (
@@ -102,7 +102,7 @@ const isAuxiliarAuthenticated = async (
 
         // Verificar si el auxiliar existe y está activo
         // Aquí reemplazamos la llamada directa a Prisma por nuestra función desacoplada
-        const auxiliar = await buscarAuxiliarPorDNISelect(
+        const auxiliar = await buscarAuxiliarPorIdSelect(
           decodedPayload.ID_Usuario,
           ["Estado"]
         );
@@ -125,7 +125,7 @@ const isAuxiliarAuthenticated = async (
 
       // Agregar información del usuario decodificada a la solicitud para uso posterior
       req.user = {
-        DNI_Auxiliar: decodedPayload.ID_Usuario,
+        Id_Auxiliar: decodedPayload.ID_Usuario,
         Nombre_Usuario: decodedPayload.Nombre_Usuario,
       } as AuxiliarAuthenticated;
 

@@ -10,20 +10,20 @@ export type ProfesorSecundariaConAula = T_Profesores_Secundaria & {
 };
 
 /**
- * Busca un tutor (profesor de secundaria con aula asignada) por su DNI incluyendo información de su aula
+ * Busca un tutor (profesor de secundaria con aula asignada) por su Id incluyendo información de su aula
  * Incluye todos los campos, incluyendo la contraseña
- * @param dniProfesor DNI del tutor a buscar
+ * @param idProfesorSecundaria Id del tutor a buscar
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos del tutor con su aula o null si no existe
  */
-export async function buscarTutorPorDNIConAula(
-  dniProfesor: string,
+export async function buscarTutorPorIdConAula(
+  idProfesorSecundaria: string,
   instanciaEnUso?: RDP02
 ): Promise<ProfesorSecundariaConAula | null> {
   // Consulta única que obtiene el profesor y su aula asociada mediante JOIN
   const sql = `
     SELECT 
-      p."DNI_Profesor_Secundaria",
+      p."Id_Profesor_Secundaria",
       p."Nombres",
       p."Apellidos",
       p."Genero",
@@ -39,12 +39,12 @@ export async function buscarTutorPorDNIConAula(
       a."Seccion",
       a."Color"
     FROM "T_Profesores_Secundaria" p
-    LEFT JOIN "T_Aulas" a ON p."DNI_Profesor_Secundaria" = a."DNI_Profesor_Secundaria"
-    WHERE p."DNI_Profesor_Secundaria" = $1
+    LEFT JOIN "T_Aulas" a ON p."Id_Profesor_Secundaria" = a."Id_Profesor_Secundaria"
+    WHERE p."Id_Profesor_Secundaria" = $1
     LIMIT 1
   `;
 
-  const result = await query(instanciaEnUso, sql, [dniProfesor]);
+  const result = await query(instanciaEnUso, sql, [idProfesorSecundaria]);
 
   if (result.rows.length === 0) {
     return null;
@@ -62,7 +62,7 @@ export async function buscarTutorPorDNIConAula(
 
   // Estructurar los datos como ProfesorSecundariaConAula
   const profesor: ProfesorSecundariaConAula = {
-    DNI_Profesor_Secundaria: row.DNI_Profesor_Secundaria,
+    Id_Profesor_Secundaria: row.Id_Profesor_Secundaria,
     Nombres: row.Nombres,
     Apellidos: row.Apellidos,
     Genero: row.Genero,
@@ -78,8 +78,8 @@ export async function buscarTutorPorDNIConAula(
       Grado: row.Grado,
       Seccion: row.Seccion,
       Color: row.Color,
-      DNI_Profesor_Primaria: null, // Campos que no están en el SELECT pero son parte del tipo T_Aulas
-      DNI_Profesor_Secundaria: row.DNI_Profesor_Secundaria,
+      Id_Profesor_Primaria: null, // Campos que no están en el SELECT pero son parte del tipo T_Aulas
+      Id_Profesor_Secundaria: row.Id_Profesor_Secundaria,
     },
   };
 
@@ -87,18 +87,18 @@ export async function buscarTutorPorDNIConAula(
 }
 
 /**
- * Busca un tutor (profesor de secundaria con aula asignada) por su DNI seleccionando campos específicos
- * @param dniProfesor DNI del tutor a buscar
+ * Busca un tutor (profesor de secundaria con aula asignada) por su Id seleccionando campos específicos
+ * @param idProfesorSecundaria Id del tutor a buscar
  * @param camposProfesor Campos específicos a seleccionar del profesor
  * @param camposAula Campos específicos a seleccionar del aula
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos parciales del tutor con su aula o null si no existe
  */
-export async function buscarTutorPorDNIConAulaSelect<
+export async function buscarTutorPorIdConAulaSelect<
   K extends keyof T_Profesores_Secundaria,
   A extends keyof T_Aulas
 >(
-  dniProfesor: string,
+  idProfesorSecundaria: string,
   camposProfesor: K[],
   camposAula: A[],
   instanciaEnUso?: RDP02
@@ -123,12 +123,12 @@ export async function buscarTutorPorDNIConAulaSelect<
       ${camposProfStr},
       ${camposAulaStr}
     FROM "T_Profesores_Secundaria" p
-    LEFT JOIN "T_Aulas" a ON p."DNI_Profesor_Secundaria" = a."DNI_Profesor_Secundaria"
-    WHERE p."DNI_Profesor_Secundaria" = $1
+    LEFT JOIN "T_Aulas" a ON p."Id_Profesor_Secundaria" = a."Id_Profesor_Secundaria"
+    WHERE p."Id_Profesor_Secundaria" = $1
     LIMIT 1
   `;
 
-  const result = await query(instanciaEnUso, sql, [dniProfesor]);
+  const result = await query(instanciaEnUso, sql, [idProfesorSecundaria]);
 
   if (result.rows.length === 0) {
     return null;

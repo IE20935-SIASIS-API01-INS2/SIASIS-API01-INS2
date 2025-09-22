@@ -13,7 +13,7 @@ export async function buscarTodosLosAuxiliares(
 ): Promise<
   Pick<
     T_Auxiliares,
-    | "DNI_Auxiliar"
+    | "Id_Auxiliar"
     | "Nombres"
     | "Apellidos"
     | "Genero"
@@ -26,7 +26,7 @@ export async function buscarTodosLosAuxiliares(
 > {
   const sql = `
     SELECT 
-      "DNI_Auxiliar", 
+      "Id_Auxiliar", 
       "Nombres", 
       "Apellidos", 
       "Genero", 
@@ -42,7 +42,7 @@ export async function buscarTodosLosAuxiliares(
   const result = await query<
     Pick<
       T_Auxiliares,
-      | "DNI_Auxiliar"
+      | "Id_Auxiliar"
       | "Nombres"
       | "Apellidos"
       | "Genero"

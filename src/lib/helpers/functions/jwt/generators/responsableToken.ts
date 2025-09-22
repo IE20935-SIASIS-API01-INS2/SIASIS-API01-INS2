@@ -7,13 +7,13 @@ import { getRandomElementFromEnum } from "../../../getRandomElementFromEnum";
 
 // Función para generar un token JWT para Responsables
 export function generateResponsableToken(
-  dniResponsable: string,
+  idResponsable: string,
   nombre_usuario: string
 ): string {
   const jwtSecretKey = process.env.JWT_KEY_RESPONSABLES!;
 
   const payload = {
-    Id_Responsable: dniResponsable,
+    Id_Responsable: idResponsable,
     Nombre_Usuario: nombre_usuario,
     RDP02_INSTANCE: getRandomElementFromEnum<RDP02>(RDP02),
     RDP03_INSTANCE: getRandomElementFromEnum<RDP03>(RDP03),

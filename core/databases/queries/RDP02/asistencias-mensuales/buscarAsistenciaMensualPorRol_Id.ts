@@ -11,7 +11,7 @@ export interface ResultadoConsultaAsistenciasMensuales {
 
 /**
  * Busca asistencias mensuales de directivos CON IDs
- * NOTA: Directivos usan Id_Directivo (numérico) en lugar de DNI
+ * NOTA: Directivos usan Id_Directivo (numérico)
  */
 export async function buscarAsistenciaMensualDirectivo(
   idDirectivo: number, // Viene como string pero se usa como número
@@ -67,7 +67,7 @@ export async function buscarAsistenciaMensualDirectivo(
  * ✅ NUEVO: Busca asistencias mensuales de personal administrativo CON IDs
  */
 export async function buscarAsistenciaMensualPersonalAdministrativo(
-  dni: string,
+  id: string,
   mes: number,
   instanciaEnUso?: RDP02
 ): Promise<ResultadoConsultaAsistenciasMensuales | null> {
@@ -76,7 +76,7 @@ export async function buscarAsistenciaMensualPersonalAdministrativo(
       "Id_C_E_M_P_Administrativo",
       "Entradas"
     FROM "T_Control_Entrada_Mensual_Personal_Administrativo"
-    WHERE "DNI_Personal_Administrativo" = $1 AND "Mes" = $2
+    WHERE "Id_Personal_Administrativo" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
@@ -85,13 +85,13 @@ export async function buscarAsistenciaMensualPersonalAdministrativo(
       "Id_C_E_M_P_Administrativo",
       "Salidas"
     FROM "T_Control_Salida_Mensual_Personal_Administrativo"
-    WHERE "DNI_Personal_Administrativo" = $1 AND "Mes" = $2
+    WHERE "Id_Personal_Administrativo" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
   const [resultEntradas, resultSalidas] = await Promise.all([
-    query(instanciaEnUso, sqlEntradas, [dni, mes]),
-    query(instanciaEnUso, sqlSalidas, [dni, mes]),
+    query(instanciaEnUso, sqlEntradas, [id, mes]),
+    query(instanciaEnUso, sqlSalidas, [id, mes]),
   ]);
 
   // Si no hay registros de entradas ni salidas, retornar null
@@ -113,7 +113,7 @@ export async function buscarAsistenciaMensualPersonalAdministrativo(
  * Busca asistencias mensuales de profesores de primaria CON IDs
  */
 export async function buscarAsistenciaMensualProfesorPrimaria(
-  dni: string,
+  id: string,
   mes: number,
   instanciaEnUso?: RDP02
 ): Promise<ResultadoConsultaAsistenciasMensuales | null> {
@@ -122,7 +122,7 @@ export async function buscarAsistenciaMensualProfesorPrimaria(
       "Id_C_E_M_P_Profesores_Primaria",
       "Entradas"
     FROM "T_Control_Entrada_Mensual_Profesores_Primaria"
-    WHERE "DNI_Profesor_Primaria" = $1 AND "Mes" = $2
+    WHERE "Id_Profesor_Primaria" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
@@ -131,13 +131,13 @@ export async function buscarAsistenciaMensualProfesorPrimaria(
       "Id_C_E_M_P_Profesores_Primaria",
       "Salidas"
     FROM "T_Control_Salida_Mensual_Profesores_Primaria"
-    WHERE "DNI_Profesor_Primaria" = $1 AND "Mes" = $2
+    WHERE "Id_Profesor_Primaria" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
   const [resultEntradas, resultSalidas] = await Promise.all([
-    query(instanciaEnUso, sqlEntradas, [dni, mes]),
-    query(instanciaEnUso, sqlSalidas, [dni, mes]),
+    query(instanciaEnUso, sqlEntradas, [id, mes]),
+    query(instanciaEnUso, sqlSalidas, [id, mes]),
   ]);
 
   // Si no hay registros de entradas ni salidas, retornar null
@@ -159,7 +159,7 @@ export async function buscarAsistenciaMensualProfesorPrimaria(
  * Busca asistencias mensuales de profesores de secundaria CON IDs
  */
 export async function buscarAsistenciaMensualProfesorSecundaria(
-  dni: string,
+  id: string,
   mes: number,
   instanciaEnUso?: RDP02
 ): Promise<ResultadoConsultaAsistenciasMensuales | null> {
@@ -168,7 +168,7 @@ export async function buscarAsistenciaMensualProfesorSecundaria(
       "Id_C_E_M_P_Profesores_Secundaria",
       "Entradas"
     FROM "T_Control_Entrada_Mensual_Profesores_Secundaria"
-    WHERE "DNI_Profesor_Secundaria" = $1 AND "Mes" = $2
+    WHERE "Id_Profesor_Secundaria" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
@@ -177,13 +177,13 @@ export async function buscarAsistenciaMensualProfesorSecundaria(
       "Id_C_E_M_P_Profesores_Secundaria", 
       "Salidas"
     FROM "T_Control_Salida_Mensual_Profesores_Secundaria"
-    WHERE "DNI_Profesor_Secundaria" = $1 AND "Mes" = $2
+    WHERE "Id_Profesor_Secundaria" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
   const [resultEntradas, resultSalidas] = await Promise.all([
-    query(instanciaEnUso, sqlEntradas, [dni, mes]),
-    query(instanciaEnUso, sqlSalidas, [dni, mes]),
+    query(instanciaEnUso, sqlEntradas, [id, mes]),
+    query(instanciaEnUso, sqlSalidas, [id, mes]),
   ]);
 
   if (resultEntradas.rows.length === 0 && resultSalidas.rows.length === 0) {
@@ -204,7 +204,7 @@ export async function buscarAsistenciaMensualProfesorSecundaria(
  * Busca asistencias mensuales de auxiliares CON IDs
  */
 export async function buscarAsistenciaMensualAuxiliar(
-  dni: string,
+  id: string,
   mes: number,
   instanciaEnUso?: RDP02
 ): Promise<ResultadoConsultaAsistenciasMensuales | null> {
@@ -213,7 +213,7 @@ export async function buscarAsistenciaMensualAuxiliar(
       "Id_C_E_M_P_Auxiliar",
       "Entradas"
     FROM "T_Control_Entrada_Mensual_Auxiliar"
-    WHERE "DNI_Auxiliar" = $1 AND "Mes" = $2
+    WHERE "Id_Auxiliar" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
@@ -222,13 +222,13 @@ export async function buscarAsistenciaMensualAuxiliar(
       "Id_C_E_M_P_Auxiliar",
       "Salidas"
     FROM "T_Control_Salida_Mensual_Auxiliar"
-    WHERE "DNI_Auxiliar" = $1 AND "Mes" = $2
+    WHERE "Id_Auxiliar" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
   const [resultEntradas, resultSalidas] = await Promise.all([
-    query(instanciaEnUso, sqlEntradas, [dni, mes]),
-    query(instanciaEnUso, sqlSalidas, [dni, mes]),
+    query(instanciaEnUso, sqlEntradas, [id, mes]),
+    query(instanciaEnUso, sqlSalidas, [id, mes]),
   ]);
 
   if (resultEntradas.rows.length === 0 && resultSalidas.rows.length === 0) {
@@ -248,7 +248,7 @@ export async function buscarAsistenciaMensualAuxiliar(
  * Busca asistencias mensuales de personal administrativo CON IDs
  */
 export async function buscarResultadoConsultaAsistenciasMensualesAdministrativo(
-  dni: string,
+  id: string,
   mes: number,
   instanciaEnUso?: RDP02
 ): Promise<ResultadoConsultaAsistenciasMensuales | null> {
@@ -257,7 +257,7 @@ export async function buscarResultadoConsultaAsistenciasMensualesAdministrativo(
       "Id_C_E_M_P_Administrativo",
       "Entradas"
     FROM "T_Control_Entrada_Mensual_Personal_Administrativo"
-    WHERE "DNI_Personal_Administrativo" = $1 AND "Mes" = $2
+    WHERE "Id_Personal_Administrativo" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
@@ -266,13 +266,13 @@ export async function buscarResultadoConsultaAsistenciasMensualesAdministrativo(
       "Id_C_E_M_P_Administrativo",
       "Salidas"
     FROM "T_Control_Salida_Mensual_Personal_Administrativo"
-    WHERE "DNI_Personal_Administrativo" = $1 AND "Mes" = $2
+    WHERE "Id_Personal_Administrativo" = $1 AND "Mes" = $2
     LIMIT 1
   `;
 
   const [resultEntradas, resultSalidas] = await Promise.all([
-    query(instanciaEnUso, sqlEntradas, [dni, mes]),
-    query(instanciaEnUso, sqlSalidas, [dni, mes]),
+    query(instanciaEnUso, sqlEntradas, [id, mes]),
+    query(instanciaEnUso, sqlSalidas, [id, mes]),
   ]);
 
   if (resultEntradas.rows.length === 0 && resultSalidas.rows.length === 0) {
@@ -292,23 +292,23 @@ export async function buscarResultadoConsultaAsistenciasMensualesAdministrativo(
 /**
  * Función principal que busca asistencias según el rol CON IDs
  */
-export async function buscarAsistenciaMensualPorRol(
+export async function buscarAsistenciaMensualPorRol_Id(
   rol: RolesSistema,
-  id_o_dni: string | number,
+  id: string | number,
   mes: number,
   instanciaEnUso?: RDP02
 ): Promise<ResultadoConsultaAsistenciasMensuales | null> {
   switch (rol) {
     case RolesSistema.Directivo:
       return await buscarAsistenciaMensualDirectivo(
-        id_o_dni as number,
+        id as number,
         mes,
         instanciaEnUso
       );
 
     case RolesSistema.ProfesorPrimaria:
       return await buscarAsistenciaMensualProfesorPrimaria(
-        id_o_dni as string,
+        id as string,
         mes,
         instanciaEnUso
       );
@@ -316,21 +316,21 @@ export async function buscarAsistenciaMensualPorRol(
     case RolesSistema.ProfesorSecundaria:
     case RolesSistema.Tutor:
       return await buscarAsistenciaMensualProfesorSecundaria(
-        id_o_dni as string,
+        id as string,
         mes,
         instanciaEnUso
       );
 
     case RolesSistema.Auxiliar:
       return await buscarAsistenciaMensualAuxiliar(
-        id_o_dni as string,
+        id as string,
         mes,
         instanciaEnUso
       );
 
     case RolesSistema.PersonalAdministrativo:
       return await buscarResultadoConsultaAsistenciasMensualesAdministrativo(
-        id_o_dni as string,
+        id as string,
         mes,
         instanciaEnUso
       );

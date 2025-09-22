@@ -1,5 +1,4 @@
 import {
-  T_Aulas,
   T_Auxiliares,
   T_Directivos,
   T_Personal_Administrativo,
@@ -29,11 +28,10 @@ export type ResponsableSinContraseña = Omit<T_Responsables, "Contraseña">;
 export type PersonalAdministrativoSinContraseña = Omit<
   T_Personal_Administrativo,
   "Contraseña"
->;
+> ;
 
 // =========================================================================================
 
+
 // Cambios Adicionales en alguno tipos de algunos atributos
-export type TutorSecundariaSinContraseña = ProfesorSecundariaSinContraseña & {
-  aula: T_Aulas;
-};
+

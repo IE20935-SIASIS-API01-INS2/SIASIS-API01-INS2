@@ -3,13 +3,13 @@ import { query } from "../../../connectors/postgres";
 
 /**
  * Actualiza los datos de un profesor de secundaria
- * @param dniProfesor DNI del profesor a actualizar
+ * @param idProfesorSecundaria Id del profesor a actualizar
  * @param datos Datos a actualizar
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns true si la actualización fue exitosa, false si no se encontró el profesor
  */
 export async function actualizarseProfesorSecundaria(
-  dniProfesor: string,
+  idProfesorSecundaria: string,
   datos: {
     Celular?: string;
     Correo_Electronico?: string;
@@ -34,12 +34,12 @@ export async function actualizarseProfesorSecundaria(
   }
   
   // Añadir el identificador al final de los parámetros
-  params.push(dniProfesor);
+  params.push(idProfesorSecundaria);
   
   const sql = `
     UPDATE "T_Profesores_Secundaria" 
     SET ${setClauses.join(", ")} 
-    WHERE "DNI_Profesor_Secundaria" = $${paramIndex}
+    WHERE "Id_Profesor_Secundaria" = $${paramIndex}
   `;
   
   const result = await query(

@@ -1,12 +1,12 @@
 import { RDP02 } from "../../../../../src/interfaces/shared/RDP02Instancias";
-import { buscarProfesorPrimariaPorDNISelect } from "./buscarProfesorPrimariaPorDNI";
+import { buscarProfesorPrimariaPorIdSelect } from "./buscarProfesorPrimariaPorId";
 
 export async function buscarContraseñaProfesorPrimaria(
-  dniProfesorPrimaria: string,
+  idProfesorPrimaria: string,
   instanciaEnUso?: RDP02
 ): Promise<string | null> {
-  const profesorPrimaria = await buscarProfesorPrimariaPorDNISelect(
-    dniProfesorPrimaria,
+  const profesorPrimaria = await buscarProfesorPrimariaPorIdSelect(
+    idProfesorPrimaria,
     ["Contraseña"],
     instanciaEnUso
   );

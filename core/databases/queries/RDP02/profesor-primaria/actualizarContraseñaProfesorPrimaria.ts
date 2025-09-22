@@ -3,18 +3,18 @@ import { query } from "../../../connectors/postgres";
 
 // Actualizar contraseña de profesor primaria
 export async function actualizarContraseñaProfesorPrimaria(
-  dniProfesor: string,
+  idProfesorPrimaria: string,
   nuevaContraseña: string,
   instanciaEnUso?: RDP02
 ): Promise<boolean> {
   const sql = `
       UPDATE "T_Profesores_Primaria"
       SET "Contraseña" = $2
-      WHERE "DNI_Profesor_Primaria" = $1
+      WHERE "Id_Profesor_Primaria" = $1
     `;
 
   const result = await query(instanciaEnUso, sql, [
-    dniProfesor,
+    idProfesorPrimaria,
     nuevaContraseña,
   ]);
 

@@ -4,26 +4,26 @@ import { query } from "../../../connectors/postgres";
 import { RolesSistema } from "../../../../../src/interfaces/shared/RolesSistema";
 
 /**
- * Busca un auxiliar por su DNI
- * @param dniAuxiliar DNI del auxiliar
+ * Busca un auxiliar por su ID
+ * @param idAuxiliar ID del auxiliar
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos del auxiliar o null si no existe
  */
-export async function buscarAuxiliarPorDNI(
-  dniAuxiliar: string,
+export async function buscarAuxiliarPorId(
+  idAuxiliar: string,
   instanciaEnUso?: RDP02
 ): Promise<T_Auxiliares | null> {
   const sql = `
     SELECT *
     FROM "T_Auxiliares"
-    WHERE "DNI_Auxiliar" = $1
+    WHERE "Id_Auxiliar" = $1
   `;
 
   // Operación de lectura
   const result = await query<T_Auxiliares>(
     instanciaEnUso,
     sql,
-    [dniAuxiliar],
+    [idAuxiliar],
     RolesSistema.Auxiliar
   );
 
@@ -35,14 +35,14 @@ export async function buscarAuxiliarPorDNI(
 }
 
 /**
- * Busca un auxiliar por su DNI y selecciona campos específicos
- * @param dniAuxiliar DNI del auxiliar
+ * Busca un auxiliar por su ID y selecciona campos específicos
+ * @param idAuxiliar ID del auxiliar
  * @param campos Campos específicos a seleccionar (keyof T_Auxiliares)
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos parciales del auxiliar o null si no existe
  */
-export async function buscarAuxiliarPorDNISelect<K extends keyof T_Auxiliares>(
-  dniAuxiliar: string,
+export async function buscarAuxiliarPorIdSelect<K extends keyof T_Auxiliares>(
+  idAuxiliar: string,
   campos: K[],
   instanciaEnUso?: RDP02
 ): Promise<Pick<T_Auxiliares, K> | null> {
@@ -52,14 +52,14 @@ export async function buscarAuxiliarPorDNISelect<K extends keyof T_Auxiliares>(
   const sql = `
     SELECT ${camposStr}
     FROM "T_Auxiliares"
-    WHERE "DNI_Auxiliar" = $1
+    WHERE "Id_Auxiliar" = $1
   `;
 
   // Operación de lectura
   const result = await query<Pick<T_Auxiliares, K>>(
     instanciaEnUso,
     sql,
-    [dniAuxiliar],
+    [idAuxiliar],
     RolesSistema.Auxiliar
   );
 

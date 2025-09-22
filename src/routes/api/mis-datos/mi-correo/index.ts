@@ -31,7 +31,7 @@ import { OTP_CODE_FOR_UPDATING_EMAIL_MINUTES } from "../../../../constants/expir
 
 import { verificarCorreoExistente } from "../../../../../core/databases/queries/RDP02/shared/emails/verificarCorreoExistente";
 import { buscarDirectivoPorIdSelect } from "../../../../../core/databases/queries/RDP02/directivos/buscarDirectivoPorId";
-import { buscarProfesorSecundariaPorDNISelect } from "../../../../../core/databases/queries/RDP02/profesor-secundaria/buscarProfesorSecundariaPorDNI";
+import { buscarProfesorSecundariaPorIdSelect } from "../../../../../core/databases/queries/RDP02/profesor-secundaria/buscarProfesorSecundariaPorId";
 import { crearCodigoOTP } from "../../../../../core/databases/queries/RDP02/codigos-OTP/crearCodigoOTP";
 import { buscarCodigoOTP } from "../../../../../core/databases/queries/RDP02/codigos-OTP/buscarCodigoOTP";
 import { actualizarCorreoDirectivo } from "../../../../../core/databases/queries/RDP02/directivos/actualizarCorreoElectronicoDirectivo";
@@ -113,9 +113,9 @@ router.put(
         nombreCompleto = `${directivo.Nombres} ${directivo.Apellidos}`;
       } else {
         // Rol es Tutor
-        const tutor = await buscarProfesorSecundariaPorDNISelect(
+        const tutor = await buscarProfesorSecundariaPorIdSelect(
           (userData as ProfesorTutorSecundariaAuthenticated)
-            .DNI_Profesor_Secundaria,
+            .Id_Profesor_Secundaria,
           ["Nombres", "Apellidos"]
         );
 
@@ -151,7 +151,7 @@ router.put(
             userRole === RolesSistema.Directivo
               ? String((userData as DirectivoAuthenticated).Id_Directivo)
               : (userData as ProfesorTutorSecundariaAuthenticated)
-                  .DNI_Profesor_Secundaria,
+                  .Id_Profesor_Secundaria,
           Fecha_Expiracion: fechaExpiracion,
         },
         rdp02EnUso
@@ -263,7 +263,7 @@ router.post(
         userRole === RolesSistema.Directivo
           ? String((userData as DirectivoAuthenticated).Id_Directivo)
           : (userData as ProfesorTutorSecundariaAuthenticated)
-              .DNI_Profesor_Secundaria;
+              .Id_Profesor_Secundaria;
 
       // Timestamp actual
       const ahora = Date.now();
@@ -299,7 +299,7 @@ router.post(
         // Rol es Tutor
         await actualizarCorreoProfesorTutorSecundaria(
           (userData as ProfesorTutorSecundariaAuthenticated)
-            .DNI_Profesor_Secundaria,
+            .Id_Profesor_Secundaria,
           nuevoCorreo,
           rdp02EnUso
         );

@@ -3,7 +3,7 @@ import { AuxiliarSinContraseña } from "../../shared/others/types";
 
 export type AuxiliarDataNecesariaParaCambioEstado = Pick<
   AuxiliarSinContraseña,
-  "DNI_Auxiliar" | "Nombres" | "Apellidos" | "Estado"
+  "Id_Auxiliar" | "Nombres" | "Apellidos" | "Estado"
 >;
 
 // Interfaces para los endpoints
@@ -25,7 +25,7 @@ export interface UpdateAuxiliarRequestBody {
 
 export interface UpdateAuxiliarSuccessResponse extends SuccessResponseAPIBase {
   data: {
-    DNI_Auxiliar: string;
+    Id_Auxiliar: string;
     Nombres: string;
     Apellidos: string;
     Genero: string;

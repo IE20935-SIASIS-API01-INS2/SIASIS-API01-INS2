@@ -12,7 +12,7 @@ import {
   TokenErrorTypes,
   UserErrorTypes,
 } from "../interfaces/shared/errors";
-import { buscarPersonalAdministrativoPorDNISelect } from "../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorDNI";
+import { buscarPersonalAdministrativoPorIdSelect } from "../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorId";
 
 // Middleware para verificar si el usuario es Personal Administrativo
 const isPersonalAdministrativoAuthenticated = async (
@@ -103,7 +103,7 @@ const isPersonalAdministrativoAuthenticated = async (
 
         // Verificar si el personal administrativo existe y está activo
         // Reemplazo de la llamada a Prisma por la función desacoplada
-        const personal = await buscarPersonalAdministrativoPorDNISelect(
+        const personal = await buscarPersonalAdministrativoPorIdSelect(
           decodedPayload.ID_Usuario,
           ["Estado"]
         );
@@ -127,7 +127,7 @@ const isPersonalAdministrativoAuthenticated = async (
 
       // Agregar información del usuario decodificada a la solicitud para uso posterior
       req.user = {
-        DNI_Personal_Administrativo: decodedPayload.ID_Usuario,
+        Id_Personal_Administrativo: decodedPayload.ID_Usuario,
         Nombre_Usuario: decodedPayload.Nombre_Usuario,
       } as PersonalAdministrativoAuthenticated;
 

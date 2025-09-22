@@ -132,7 +132,7 @@ router.put("/", (async (req: Request, res: Response) => {
 
       case RolesSistema.Auxiliar: {
         contraseñaAlmacenada = await buscarContraseñaAuxiliar(
-          (userData as AuxiliarAuthenticated).DNI_Auxiliar,
+          (userData as AuxiliarAuthenticated).Id_Auxiliar,
           rdp02EnUso
         );
 
@@ -156,7 +156,7 @@ router.put("/", (async (req: Request, res: Response) => {
 
       case RolesSistema.ProfesorPrimaria: {
         contraseñaAlmacenada = await buscarContraseñaProfesorPrimaria(
-          (userData as ProfesorPrimariaAuthenticated).DNI_Profesor_Primaria,
+          (userData as ProfesorPrimariaAuthenticated).Id_Profesor_Primaria,
           rdp02EnUso
         );
 
@@ -182,7 +182,7 @@ router.put("/", (async (req: Request, res: Response) => {
       case RolesSistema.Tutor: {
         contraseñaAlmacenada = await buscarContraseñaProfesorSecundaria(
           (userData as ProfesorTutorSecundariaAuthenticated)
-            .DNI_Profesor_Secundaria,
+            .Id_Profesor_Secundaria,
           rdp02EnUso
         );
 
@@ -209,7 +209,7 @@ router.put("/", (async (req: Request, res: Response) => {
       case RolesSistema.PersonalAdministrativo: {
         contraseñaAlmacenada = await buscarContraseñaPersonalAdministrativo(
           (userData as PersonalAdministrativoAuthenticated)
-            .DNI_Personal_Administrativo,
+            .Id_Personal_Administrativo,
           rdp02EnUso
         );
 
@@ -234,7 +234,7 @@ router.put("/", (async (req: Request, res: Response) => {
       /* 
         case RolesSistema.Responsable: {
           contraseñaAlmacenada = await buscarContraseñaResponsable(
-            (userData as ResponsableAuthenticated).DNI_Responsable,
+            (userData as ResponsableAuthenticated).Id_Responsable,
             rdp02EnUso
           );
 
@@ -288,7 +288,7 @@ router.put("/", (async (req: Request, res: Response) => {
 
       case RolesSistema.Auxiliar:
         actualizacionExitosa = await actualizarContraseñaAuxiliar(
-          (userData as AuxiliarAuthenticated).DNI_Auxiliar,
+          (userData as AuxiliarAuthenticated).Id_Auxiliar,
           contraseñaEncriptada,
           rdp02EnUso
         );
@@ -296,7 +296,7 @@ router.put("/", (async (req: Request, res: Response) => {
 
       case RolesSistema.ProfesorPrimaria:
         actualizacionExitosa = await actualizarContraseñaProfesorPrimaria(
-          (userData as ProfesorPrimariaAuthenticated).DNI_Profesor_Primaria,
+          (userData as ProfesorPrimariaAuthenticated).Id_Profesor_Primaria,
           contraseñaEncriptada,
           rdp02EnUso
         );
@@ -306,7 +306,7 @@ router.put("/", (async (req: Request, res: Response) => {
       case RolesSistema.Tutor:
         actualizacionExitosa = await actualizarContraseñaProfesorSecundaria(
           (userData as ProfesorTutorSecundariaAuthenticated)
-            .DNI_Profesor_Secundaria,
+            .Id_Profesor_Secundaria,
           contraseñaEncriptada,
           rdp02EnUso
         );
@@ -315,7 +315,7 @@ router.put("/", (async (req: Request, res: Response) => {
       case RolesSistema.PersonalAdministrativo:
         actualizacionExitosa = await actualizarContraseñaPersonalAdministrativo(
           (userData as PersonalAdministrativoAuthenticated)
-            .DNI_Personal_Administrativo,
+            .Id_Personal_Administrativo,
           contraseñaEncriptada,
           rdp02EnUso
         );
@@ -324,7 +324,7 @@ router.put("/", (async (req: Request, res: Response) => {
       /* 
         case RolesSistema.Responsable:
           actualizacionExitosa = await actualizarContraseñaResponsable(
-            (userData as ResponsableAuthenticated).DNI_Responsable,
+            (userData as ResponsableAuthenticated).Id_Responsable,
             contraseñaEncriptada,
             rdp02EnUso
           );

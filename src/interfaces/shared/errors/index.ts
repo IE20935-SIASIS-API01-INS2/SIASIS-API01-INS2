@@ -15,8 +15,10 @@ export enum RequestErrorTypes {
   INVALID_PARAMETERS = "INVALID_PARAMETERS",
   MISSING_PARAMETERS = "MISSING_PARAMETERS",
   REQUEST_FAILED = "REQUEST_FAILED",
-  MALFORMED_REQUEST = "MALFORMED_REQUEST", // 🆕 Solicitud mal formada
-  PAYLOAD_TOO_LARGE = "PAYLOAD_TOO_LARGE", // 🆕 Carga útil demasiado grande
+  MALFORMED_REQUEST = "MALFORMED_REQUEST", 
+  PAYLOAD_TOO_LARGE = "PAYLOAD_TOO_LARGE", 
+  RESOURCE_NOT_FOUND = "RESOURCE_NOT_FOUND", // Recurso solicitado no encontrado
+  METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED", // Método HTTP no permitido
 }
 
 /**
@@ -74,7 +76,7 @@ export enum SystemErrorTypes {
  * Errores relacionados a validaciones de datos
  */
 export enum ValidationErrorTypes {
-  INVALID_DNI = "INVALID_DNI",
+  INVALID_USER_IDENTIFIER = "INVALID_USER_IDENTIFIER",
   INVALID_GENDER = "INVALID_GENDER",
   INVALID_PHONE = "INVALID_PHONE",
   INVALID_EMAIL = "INVALID_EMAIL",
@@ -282,4 +284,3 @@ export const ErrorGroups = {
     RequestErrorTypes.MISSING_PARAMETERS,
   ],
 } as const;
-

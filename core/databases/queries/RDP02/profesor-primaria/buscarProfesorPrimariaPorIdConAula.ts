@@ -10,19 +10,19 @@ export type ProfesorPrimariaConAulas = T_Profesores_Primaria & {
 };
 
 /**
- * Busca un profesor de primaria por su DNI incluyendo información de su aula
- * @param dniProfesor DNI del profesor de primaria a buscar
+ * Busca un profesor de primaria por su Id incluyendo información de su aula
+ * @param idProfesorPrimaria Id del profesor de primaria a buscar
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos del profesor con su aula o null si no existe
  */
-export async function buscarProfesorPrimariaPorDNIConAula(
-  dniProfesor: string,
+export async function buscarProfesorPrimariaPorIdConAula(
+  idProfesorPrimaria: string,
   instanciaEnUso?: RDP02
 ): Promise<ProfesorPrimariaConAulas | null> {
   // Primero obtener los datos básicos del profesor
   const sqlProfesor = `
       SELECT 
-        "DNI_Profesor_Primaria",
+        "Id_Profesor_Primaria",
         "Nombres",
         "Apellidos",
         "Genero",
@@ -32,13 +32,13 @@ export async function buscarProfesorPrimariaPorDNIConAula(
         "Celular",
         "Google_Drive_Foto_ID"
       FROM "T_Profesores_Primaria"
-      WHERE "DNI_Profesor_Primaria" = $1
+      WHERE "Id_Profesor_Primaria" = $1
     `;
 
   const resultProfesor = await query<T_Profesores_Primaria>(
     instanciaEnUso,
     sqlProfesor,
-    [dniProfesor]
+    [idProfesorPrimaria]
   );
 
   if (resultProfesor.rows.length === 0) {
@@ -56,12 +56,12 @@ export async function buscarProfesorPrimariaPorDNIConAula(
         "Seccion",
         "Color"
       FROM "T_Aulas"
-      WHERE "DNI_Profesor_Primaria" = $1
+      WHERE "Id_Profesor_Primaria" = $1
       LIMIT 1
     `;
 
   const resultAula = await query<T_Aulas>(instanciaEnUso, sqlAula, [
-    dniProfesor,
+    idProfesorPrimaria,
   ]);
 
   // Combinar los resultados (manteniendo el formato con un array para compatibilidad)

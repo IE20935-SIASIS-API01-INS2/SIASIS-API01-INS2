@@ -13,31 +13,81 @@ import { RolesSistema } from "../../../../../src/interfaces/shared/RolesSistema"
 import { query } from "../../../connectors/postgres";
 
 /**
- * Determina si un criterio de búsqueda es numérico (DNI) o texto (nombres/apellidos)
+ * Analiza un criterio de búsqueda y separa números de texto
+ * @param criterio Criterio de búsqueda del usuario
+ * @returns Objeto con partes numéricas y textuales separadas
  */
 function analizarCriterioBusqueda(criterio: string): {
-  esDNI: boolean;
-  palabrasBusqueda: string[];
+  partesNumericas: string[];
+  partesTextuales: string[];
 } {
   const criterioLimpio = criterio.trim();
-
-  // Si es solo números, es búsqueda por DNI
-  if (/^\d+$/.test(criterioLimpio)) {
-    return {
-      esDNI: true,
-      palabrasBusqueda: [criterioLimpio],
-    };
-  }
-
-  // Si contiene letras, es búsqueda por nombres/apellidos
-  const palabras = criterioLimpio
-    .split(/\s+/)
-    .filter((palabra) => palabra.length > 0)
-    .map((palabra) => palabra.toLowerCase());
+  const palabras = criterioLimpio.split(/\s+/).filter(palabra => palabra.length > 0);
+  
+  const partesNumericas: string[] = [];
+  const partesTextuales: string[] = [];
+  
+  palabras.forEach(palabra => {
+    // Si es solo números (puede incluir guión para el formato identificador-tipo)
+    if (/^\d+(-\d+)?$/.test(palabra)) {
+      partesNumericas.push(palabra);
+    } else {
+      // Si contiene letras, es texto para nombres/apellidos
+      partesTextuales.push(palabra.toLowerCase());
+    }
+  });
 
   return {
-    esDNI: false,
-    palabrasBusqueda: palabras,
+    partesNumericas,
+    partesTextuales,
+  };
+}
+
+/**
+ * Construye la cláusula WHERE para búsqueda por identificadores
+ * @param partesNumericas Array de partes numéricas del criterio
+ * @param campoIdentificador Nombre del campo identificador en la BD
+ * @param parametroInicial Índice inicial para los parámetros
+ * @returns Objeto con la cláusula WHERE y los parámetros
+ */
+function construirClausulaWherePorIdentificador(
+  partesNumericas: string[],
+  campoIdentificador: string,
+  parametroInicial: number = 1
+): { clausula: string; parametros: string[] } {
+  if (partesNumericas.length === 0) {
+    return { clausula: "", parametros: [] };
+  }
+
+  const condiciones: string[] = [];
+  const parametros: string[] = [];
+  let indiceParam = parametroInicial;
+
+  partesNumericas.forEach(parte => {
+    // Si es un número de 8 dígitos sin guión, buscar como DNI por defecto
+    if (/^\d{8}$/.test(parte)) {
+      // Para directivos, buscar en Identificador_Nacional
+      if (campoIdentificador === '"Identificador_Nacional"') {
+        condiciones.push(`(${campoIdentificador} LIKE $${indiceParam} OR ${campoIdentificador} LIKE $${indiceParam + 1})`);
+        parametros.push(`%${parte}%`, `%${parte}-1%`); // Buscar también como DNI (tipo 1)
+        indiceParam += 2;
+      } else {
+        // Para otros roles, buscar directamente en el campo Id_*
+        condiciones.push(`${campoIdentificador} LIKE $${indiceParam}`);
+        parametros.push(`%${parte}%`);
+        indiceParam += 1;
+      }
+    } else {
+      // Para cualquier otro formato numérico, buscar como está
+      condiciones.push(`${campoIdentificador} LIKE $${indiceParam}`);
+      parametros.push(`%${parte}%`);
+      indiceParam += 1;
+    }
+  });
+
+  return {
+    clausula: condiciones.join(" OR "),
+    parametros,
   };
 }
 
@@ -86,7 +136,7 @@ export async function buscarDirectivosPorCriterio(
   let sql = `
     SELECT
       "Id_Directivo",
-      "DNI",
+      "Identificador_Nacional",
       "Nombres",
       "Apellidos", 
       "Genero",
@@ -98,18 +148,29 @@ export async function buscarDirectivosPorCriterio(
   let condicionesWhere: string[] = [];
 
   if (criterio && criterio.trim()) {
-    const { esDNI, palabrasBusqueda } = analizarCriterioBusqueda(criterio);
+    const { partesNumericas, partesTextuales } = analizarCriterioBusqueda(criterio);
 
-    if (esDNI) {
-      condicionesWhere.push(`"DNI" LIKE $1`);
-      parametros.push(`%${palabrasBusqueda[0]}%`);
-    } else {
-      const { clausula, parametros: paramNombres } =
-        construirClausulaWherePorNombres(
-          palabrasBusqueda,
-          '"Nombres"',
-          '"Apellidos"'
-        );
+    // Buscar por identificador si hay partes numéricas
+    if (partesNumericas.length > 0) {
+      const { clausula, parametros: paramId } = construirClausulaWherePorIdentificador(
+        partesNumericas,
+        '"Identificador_Nacional"',
+        parametros.length + 1
+      );
+      if (clausula) {
+        condicionesWhere.push(`(${clausula})`);
+        parametros.push(...paramId);
+      }
+    }
+
+    // Buscar por nombres si hay partes textuales
+    if (partesTextuales.length > 0) {
+      const { clausula, parametros: paramNombres } = construirClausulaWherePorNombres(
+        partesTextuales,
+        '"Nombres"',
+        '"Apellidos"',
+        parametros.length + 1
+      );
       if (clausula) {
         condicionesWhere.push(`(${clausula})`);
         parametros.push(...paramNombres);
@@ -138,7 +199,7 @@ export async function buscarAuxiliaresPorCriterio(
 ): Promise<AuxiliarGenerico[]> {
   let sql = `
     SELECT 
-      "DNI_Auxiliar",
+      "Id_Auxiliar",
       "Nombres",
       "Apellidos",
       "Genero",
@@ -151,18 +212,29 @@ export async function buscarAuxiliaresPorCriterio(
   let condicionesAdicionales: string[] = [];
 
   if (criterio && criterio.trim()) {
-    const { esDNI, palabrasBusqueda } = analizarCriterioBusqueda(criterio);
+    const { partesNumericas, partesTextuales } = analizarCriterioBusqueda(criterio);
 
-    if (esDNI) {
-      condicionesAdicionales.push(`"DNI_Auxiliar" LIKE $1`);
-      parametros.push(`%${palabrasBusqueda[0]}%`);
-    } else {
-      const { clausula, parametros: paramNombres } =
-        construirClausulaWherePorNombres(
-          palabrasBusqueda,
-          '"Nombres"',
-          '"Apellidos"'
-        );
+    // Buscar por identificador si hay partes numéricas
+    if (partesNumericas.length > 0) {
+      const { clausula, parametros: paramId } = construirClausulaWherePorIdentificador(
+        partesNumericas,
+        '"Id_Auxiliar"',
+        parametros.length + 1
+      );
+      if (clausula) {
+        condicionesAdicionales.push(`(${clausula})`);
+        parametros.push(...paramId);
+      }
+    }
+
+    // Buscar por nombres si hay partes textuales
+    if (partesTextuales.length > 0) {
+      const { clausula, parametros: paramNombres } = construirClausulaWherePorNombres(
+        partesTextuales,
+        '"Nombres"',
+        '"Apellidos"',
+        parametros.length + 1
+      );
       if (clausula) {
         condicionesAdicionales.push(`(${clausula})`);
         parametros.push(...paramNombres);
@@ -191,7 +263,7 @@ export async function buscarProfesoresPrimariaPorCriterio(
 ): Promise<ProfesorPrimariaGenerico[]> {
   let sql = `
     SELECT 
-      "DNI_Profesor_Primaria",
+      "Id_Profesor_Primaria",
       "Nombres",
       "Apellidos",
       "Genero",
@@ -204,18 +276,29 @@ export async function buscarProfesoresPrimariaPorCriterio(
   let condicionesAdicionales: string[] = [];
 
   if (criterio && criterio.trim()) {
-    const { esDNI, palabrasBusqueda } = analizarCriterioBusqueda(criterio);
+    const { partesNumericas, partesTextuales } = analizarCriterioBusqueda(criterio);
 
-    if (esDNI) {
-      condicionesAdicionales.push(`"DNI_Profesor_Primaria" LIKE $1`);
-      parametros.push(`%${palabrasBusqueda[0]}%`);
-    } else {
-      const { clausula, parametros: paramNombres } =
-        construirClausulaWherePorNombres(
-          palabrasBusqueda,
-          '"Nombres"',
-          '"Apellidos"'
-        );
+    // Buscar por identificador si hay partes numéricas
+    if (partesNumericas.length > 0) {
+      const { clausula, parametros: paramId } = construirClausulaWherePorIdentificador(
+        partesNumericas,
+        '"Id_Profesor_Primaria"',
+        parametros.length + 1
+      );
+      if (clausula) {
+        condicionesAdicionales.push(`(${clausula})`);
+        parametros.push(...paramId);
+      }
+    }
+
+    // Buscar por nombres si hay partes textuales
+    if (partesTextuales.length > 0) {
+      const { clausula, parametros: paramNombres } = construirClausulaWherePorNombres(
+        partesTextuales,
+        '"Nombres"',
+        '"Apellidos"',
+        parametros.length + 1
+      );
       if (clausula) {
         condicionesAdicionales.push(`(${clausula})`);
         parametros.push(...paramNombres);
@@ -244,7 +327,7 @@ export async function buscarProfesoresSecundariaPorCriterio(
 ): Promise<ProfesorSecundariaGenerico[]> {
   let sql = `
     SELECT 
-      "DNI_Profesor_Secundaria",
+      "Id_Profesor_Secundaria",
       "Nombres",
       "Apellidos",
       "Genero",
@@ -257,18 +340,29 @@ export async function buscarProfesoresSecundariaPorCriterio(
   let condicionesAdicionales: string[] = [];
 
   if (criterio && criterio.trim()) {
-    const { esDNI, palabrasBusqueda } = analizarCriterioBusqueda(criterio);
+    const { partesNumericas, partesTextuales } = analizarCriterioBusqueda(criterio);
 
-    if (esDNI) {
-      condicionesAdicionales.push(`"DNI_Profesor_Secundaria" LIKE $1`);
-      parametros.push(`%${palabrasBusqueda[0]}%`);
-    } else {
-      const { clausula, parametros: paramNombres } =
-        construirClausulaWherePorNombres(
-          palabrasBusqueda,
-          '"Nombres"',
-          '"Apellidos"'
-        );
+    // Buscar por identificador si hay partes numéricas
+    if (partesNumericas.length > 0) {
+      const { clausula, parametros: paramId } = construirClausulaWherePorIdentificador(
+        partesNumericas,
+        '"Id_Profesor_Secundaria"',
+        parametros.length + 1
+      );
+      if (clausula) {
+        condicionesAdicionales.push(`(${clausula})`);
+        parametros.push(...paramId);
+      }
+    }
+
+    // Buscar por nombres si hay partes textuales
+    if (partesTextuales.length > 0) {
+      const { clausula, parametros: paramNombres } = construirClausulaWherePorNombres(
+        partesTextuales,
+        '"Nombres"',
+        '"Apellidos"',
+        parametros.length + 1
+      );
       if (clausula) {
         condicionesAdicionales.push(`(${clausula})`);
         parametros.push(...paramNombres);
@@ -297,13 +391,13 @@ export async function buscarTutoresPorCriterio(
 ): Promise<TutorGenerico[]> {
   let sql = `
     SELECT 
-      p."DNI_Profesor_Secundaria",
+      p."Id_Profesor_Secundaria",
       p."Nombres",
       p."Apellidos",
       p."Genero",
       p."Google_Drive_Foto_ID"
     FROM "T_Profesores_Secundaria" p
-    INNER JOIN "T_Aulas" a ON p."DNI_Profesor_Secundaria" = a."DNI_Profesor_Secundaria"
+    INNER JOIN "T_Aulas" a ON p."Id_Profesor_Secundaria" = a."Id_Profesor_Secundaria"
     WHERE p."Estado" = true
   `;
 
@@ -311,18 +405,29 @@ export async function buscarTutoresPorCriterio(
   let condicionesAdicionales: string[] = [];
 
   if (criterio && criterio.trim()) {
-    const { esDNI, palabrasBusqueda } = analizarCriterioBusqueda(criterio);
+    const { partesNumericas, partesTextuales } = analizarCriterioBusqueda(criterio);
 
-    if (esDNI) {
-      condicionesAdicionales.push(`p."DNI_Profesor_Secundaria" LIKE $1`);
-      parametros.push(`%${palabrasBusqueda[0]}%`);
-    } else {
-      const { clausula, parametros: paramNombres } =
-        construirClausulaWherePorNombres(
-          palabrasBusqueda,
-          'p."Nombres"',
-          'p."Apellidos"'
-        );
+    // Buscar por identificador si hay partes numéricas
+    if (partesNumericas.length > 0) {
+      const { clausula, parametros: paramId } = construirClausulaWherePorIdentificador(
+        partesNumericas,
+        'p."Id_Profesor_Secundaria"',
+        parametros.length + 1
+      );
+      if (clausula) {
+        condicionesAdicionales.push(`(${clausula})`);
+        parametros.push(...paramId);
+      }
+    }
+
+    // Buscar por nombres si hay partes textuales
+    if (partesTextuales.length > 0) {
+      const { clausula, parametros: paramNombres } = construirClausulaWherePorNombres(
+        partesTextuales,
+        'p."Nombres"',
+        'p."Apellidos"',
+        parametros.length + 1
+      );
       if (clausula) {
         condicionesAdicionales.push(`(${clausula})`);
         parametros.push(...paramNombres);
@@ -351,7 +456,7 @@ export async function buscarPersonalAdministrativoPorCriterio(
 ): Promise<PersonalAdministrativoGenerico[]> {
   let sql = `
     SELECT 
-      "DNI_Personal_Administrativo",
+      "Id_Personal_Administrativo",
       "Nombres",
       "Apellidos",
       "Genero",
@@ -364,18 +469,29 @@ export async function buscarPersonalAdministrativoPorCriterio(
   let condicionesAdicionales: string[] = [];
 
   if (criterio && criterio.trim()) {
-    const { esDNI, palabrasBusqueda } = analizarCriterioBusqueda(criterio);
+    const { partesNumericas, partesTextuales } = analizarCriterioBusqueda(criterio);
 
-    if (esDNI) {
-      condicionesAdicionales.push(`"DNI_Personal_Administrativo" LIKE $1`);
-      parametros.push(`%${palabrasBusqueda[0]}%`);
-    } else {
-      const { clausula, parametros: paramNombres } =
-        construirClausulaWherePorNombres(
-          palabrasBusqueda,
-          '"Nombres"',
-          '"Apellidos"'
-        );
+    // Buscar por identificador si hay partes numéricas
+    if (partesNumericas.length > 0) {
+      const { clausula, parametros: paramId } = construirClausulaWherePorIdentificador(
+        partesNumericas,
+        '"Id_Personal_Administrativo"',
+        parametros.length + 1
+      );
+      if (clausula) {
+        condicionesAdicionales.push(`(${clausula})`);
+        parametros.push(...paramId);
+      }
+    }
+
+    // Buscar por nombres si hay partes textuales
+    if (partesTextuales.length > 0) {
+      const { clausula, parametros: paramNombres } = construirClausulaWherePorNombres(
+        partesTextuales,
+        '"Nombres"',
+        '"Apellidos"',
+        parametros.length + 1
+      );
       if (clausula) {
         condicionesAdicionales.push(`(${clausula})`);
         parametros.push(...paramNombres);
@@ -397,7 +513,7 @@ export async function buscarPersonalAdministrativoPorCriterio(
 /**
  * Función principal para buscar usuarios genéricos por rol y criterio flexible - ACTUALIZADA
  * @param rol Rol del usuario a buscar
- * @param criterio Criterio de búsqueda (DNI, nombres, apellidos o combinación)
+ * @param criterio Criterio de búsqueda (Id, nombres, apellidos o combinación)
  * @param limite Máximo número de resultados (máx. 10)
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Array de usuarios genéricos que coinciden con el criterio
@@ -412,7 +528,7 @@ export async function buscarUsuariosGenericosPorRolYCriterio(
   const limiteSeguro = Math.min(Math.max(1, limite), 10);
 
   let rawData: any[] = [];
-  let id_o_dniField: string = "";
+  let idField: string = "";
 
   // Buscar según el rol específico
   switch (rol) {
@@ -423,7 +539,7 @@ export async function buscarUsuariosGenericosPorRolYCriterio(
         instanciaEnUso
       );
       rawData = directivos;
-      id_o_dniField = "Id_Directivo"; // Para directivos usamos el ID como identificador principal
+      idField = "Id_Directivo"; // Para directivos usamos el ID como identificador principal
       break;
 
     case RolesSistema.Auxiliar:
@@ -433,7 +549,7 @@ export async function buscarUsuariosGenericosPorRolYCriterio(
         instanciaEnUso
       );
       rawData = auxiliares;
-      id_o_dniField = "DNI_Auxiliar";
+      idField = "Id_Auxiliar";
       break;
 
     case RolesSistema.ProfesorPrimaria:
@@ -443,7 +559,7 @@ export async function buscarUsuariosGenericosPorRolYCriterio(
         instanciaEnUso
       );
       rawData = profesoresPrimaria;
-      id_o_dniField = "DNI_Profesor_Primaria";
+      idField = "Id_Profesor_Primaria";
       break;
 
     case RolesSistema.ProfesorSecundaria:
@@ -453,7 +569,7 @@ export async function buscarUsuariosGenericosPorRolYCriterio(
         instanciaEnUso
       );
       rawData = profesoresSecundaria;
-      id_o_dniField = "DNI_Profesor_Secundaria";
+      idField = "Id_Profesor_Secundaria";
       break;
 
     case RolesSistema.Tutor:
@@ -463,7 +579,7 @@ export async function buscarUsuariosGenericosPorRolYCriterio(
         instanciaEnUso
       );
       rawData = tutores;
-      id_o_dniField = "DNI_Profesor_Secundaria";
+      idField = "Id_Profesor_Secundaria";
       break;
 
     case RolesSistema.PersonalAdministrativo:
@@ -473,7 +589,7 @@ export async function buscarUsuariosGenericosPorRolYCriterio(
         instanciaEnUso
       );
       rawData = personalAdmin;
-      id_o_dniField = "DNI_Personal_Administrativo";
+      idField = "Id_Personal_Administrativo";
       break;
 
     case RolesSistema.Responsable:
@@ -488,7 +604,7 @@ export async function buscarUsuariosGenericosPorRolYCriterio(
   // Convertir los datos raw a GenericUser - ACTUALIZADA
   const usuariosGenericos: GenericUser[] = rawData.map((userData) => {
     const baseUser: GenericUser = {
-      ID_O_DNI_Usuario: userData[id_o_dniField]?.toString() || "", // Convertir a string por si es número
+      ID_Usuario: userData[idField]?.toString() || "", // Convertir a string por si es número
       Rol: rol,
       Nombres: userData.Nombres,
       Apellidos: userData.Apellidos,
@@ -496,9 +612,9 @@ export async function buscarUsuariosGenericosPorRolYCriterio(
       Google_Drive_Foto_ID: userData.Google_Drive_Foto_ID || null, // CAMPO AGREGADO
     };
 
-    // Solo para directivos: agregar el DNI en campo separado
+    // Solo para directivos: agregar el Identificador Nacional en campo separado
     if (rol === RolesSistema.Directivo) {
-      baseUser.DNI_Directivo = userData.DNI;
+      baseUser.Identificador_Nacional_Directivo = userData.Identificador_Nacional;
     }
 
     return baseUser;

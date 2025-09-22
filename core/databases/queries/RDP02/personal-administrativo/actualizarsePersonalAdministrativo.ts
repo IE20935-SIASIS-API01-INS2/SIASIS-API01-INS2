@@ -3,13 +3,13 @@ import { query } from "../../../connectors/postgres";
 
 /**
  * Actualiza los datos de un miembro del personal administrativo
- * @param dniPersonal DNI del personal administrativo a actualizar
+ * @param idPersonal ID del personal administrativo a actualizar
  * @param datos Datos a actualizar
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns true si la actualización fue exitosa, false si no se encontró al personal
  */
 export async function actualizarsePersonalAdministrativo(
-  dniPersonal: string,
+  idPersonal: string,
   datos: {
     Celular?: string;
   },
@@ -33,12 +33,12 @@ export async function actualizarsePersonalAdministrativo(
   }
 
   // Añadir el identificador al final de los parámetros
-  params.push(dniPersonal);
+  params.push(idPersonal);
 
   const sql = `
     UPDATE "T_Personal_Administrativo" 
     SET ${setClauses.join(", ")} 
-    WHERE "DNI_Personal_Administrativo" = $${paramIndex}
+    WHERE "Id_Personal_Administrativo" = $${paramIndex}
   `;
 
   const result = await query(instanciaEnUso, sql, params);

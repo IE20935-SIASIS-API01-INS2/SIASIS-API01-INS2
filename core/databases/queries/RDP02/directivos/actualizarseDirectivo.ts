@@ -12,7 +12,7 @@ import { query } from "../../../connectors/postgres";
 export async function actualizarseDirectivo(
   idDirectivo: number,
   datos: {
-    DNI?: string;
+    Identificador_Nacional?: string;
     Nombres?: string;
     Apellidos?: string;
     Genero?: string;

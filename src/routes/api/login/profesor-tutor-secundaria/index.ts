@@ -203,13 +203,13 @@ router.post("/", (async (req: Request, res: Response, next: NextFunction) => {
 
     if (esTutor) {
       token = generateTutorToken(
-        profesorSecundaria.DNI_Profesor_Secundaria,
+        profesorSecundaria.Id_Profesor_Secundaria,
         profesorSecundaria.Nombre_Usuario
       );
       rol = RolesSistema.Tutor;
     } else {
       token = generateProfesorSecundariaToken(
-        profesorSecundaria.DNI_Profesor_Secundaria,
+        profesorSecundaria.Id_Profesor_Secundaria,
         profesorSecundaria.Nombre_Usuario
       );
       rol = RolesSistema.ProfesorSecundaria;

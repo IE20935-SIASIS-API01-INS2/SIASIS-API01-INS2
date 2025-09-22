@@ -7,7 +7,7 @@ import {
   UserErrorTypes,
   ValidationErrorTypes,
 } from "../../../interfaces/shared/errors";
-import { validateDNI } from "../../../lib/helpers/validators/data/validateDNI";
+import { validateIdentificadorDeUsuario } from "../../../lib/helpers/validators/data/validateIdentificadorDeUsuario";
 import {
   GetPersonalAdministrativoSuccessResponse,
   GetPersonalAdministrativoUnicoSuccessResponse,
@@ -16,7 +16,7 @@ import {
 
 // Importar funciones de consulta
 
-import { buscarPersonalAdministrativoPorDNISelect } from "../../../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorDNI";
+import { buscarPersonalAdministrativoPorIdSelect } from "../../../../core/databases/queries/RDP02/personal-administrativo/buscarPersonalAdministrativoPorId";
 import { cambiarEstadoPersonalAdministrativo } from "../../../../core/databases/queries/RDP02/personal-administrativo/cambiarEstadoPersonalAdministrativo";
 import { buscarTodosLosPersonalesAdministrativo } from "../../../../core/databases/queries/RDP02/personal-administrativo/buscarTodosLosPersonalesAdministrativos";
 import { handleSQLError } from "../../../lib/helpers/handlers/errors/postgreSQL";
@@ -63,28 +63,28 @@ router.get("/", (async (req: Request, res: Response) => {
   }
 }) as any);
 
-// Obtener un miembro del personal administrativo por DNI
-router.get("/:dni", (async (req: Request, res: Response) => {
+// Obtener un miembro del personal administrativo por Id
+router.get("/:idUsuario", (async (req: Request, res: Response) => {
   try {
-    const { dni } = req.params;
+    const { idUsuario } = req.params;
     const rdp02EnUso = req.RDP02_INSTANCE!;
 
-    // Validar el formato del DNI
-    const dniValidation = validateDNI(dni, true);
-    if (!dniValidation.isValid) {
+    // Validar el formato del identificador
+    const identificadorValidation = validateIdentificadorDeUsuario(idUsuario, true);
+    if (!identificadorValidation.isValid) {
       return res.status(400).json({
         success: false,
-        message: dniValidation.errorMessage,
-        errorType: ValidationErrorTypes.INVALID_DNI,
+        message: identificadorValidation.errorMessage,
+        errorType: ValidationErrorTypes.INVALID_USER_IDENTIFIER,
       } as ErrorResponseAPIBase);
     }
 
     // Obtener personal administrativo
     const personalAdministrativo =
-      await buscarPersonalAdministrativoPorDNISelect(
-        dni,
+      await buscarPersonalAdministrativoPorIdSelect(
+        idUsuario,
         [
-          "DNI_Personal_Administrativo",
+          "Id_Personal_Administrativo",
           "Nombres",
           "Apellidos",
           "Nombre_Usuario",
@@ -128,24 +128,24 @@ router.get("/:dni", (async (req: Request, res: Response) => {
 }) as any);
 
 // Cambiar estado de un miembro del personal administrativo (activar/desactivar)
-router.patch("/:dni/estado", (async (req: Request, res: Response) => {
+router.patch("/:idUsuario/estado", (async (req: Request, res: Response) => {
   try {
-    const { dni } = req.params;
+    const { idUsuario } = req.params;
     const rdp02EnUso = req.RDP02_INSTANCE!;
 
-    // Validar el formato del DNI
-    const dniValidation = validateDNI(dni, true);
-    if (!dniValidation.isValid) {
+    // Validar el formato del identificador
+    const identificadorValidation = validateIdentificadorDeUsuario(idUsuario, true);
+    if (!identificadorValidation.isValid) {
       return res.status(400).json({
         success: false,
-        message: dniValidation.errorMessage,
-        errorType: ValidationErrorTypes.INVALID_DNI,
+        message: identificadorValidation.errorMessage,
+        errorType: ValidationErrorTypes.INVALID_USER_IDENTIFIER,
       } as ErrorResponseAPIBase);
     }
 
     // Cambiar el estado del personal administrativo
     const updatedPersonal = await cambiarEstadoPersonalAdministrativo(
-      dni,
+      idUsuario,
       undefined,
       rdp02EnUso
     );

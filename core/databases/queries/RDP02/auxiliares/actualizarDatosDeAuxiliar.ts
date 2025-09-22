@@ -1,17 +1,16 @@
-// core/databases/queries/RDP02/auxiliares/actualizarAuxiliar.ts
 import { T_Auxiliares } from "@prisma/client";
 import { RDP02 } from "../../../../../src/interfaces/shared/RDP02Instancias";
 import { query } from "../../../connectors/postgres";
 
 /**
  * Actualiza los datos de un auxiliar
- * @param dniAuxiliar DNI del auxiliar a actualizar
+ * @param idAuxiliar ID del auxiliar a actualizar
  * @param datos Datos a actualizar (campos parciales)
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos actualizados del auxiliar o null si no se encuentra
  */
 export async function actualizarDatosDeAuxiliar(
-  dniAuxiliar: string,
+  idAuxiliar: string,
   datos: {
     Nombres?: string;
     Apellidos?: string;
@@ -22,7 +21,7 @@ export async function actualizarDatosDeAuxiliar(
   instanciaEnUso?: RDP02
 ): Promise<Pick<
   T_Auxiliares,
-  | "DNI_Auxiliar"
+  | "Id_Auxiliar"
   | "Nombres"
   | "Apellidos"
   | "Genero"
@@ -49,19 +48,19 @@ export async function actualizarDatosDeAuxiliar(
     }
 
     // Añadir el identificador al final de los parámetros
-    params.push(dniAuxiliar);
+    params.push(idAuxiliar);
 
     const sql = `
       UPDATE "T_Auxiliares" 
       SET ${setClauses.join(", ")} 
-      WHERE "DNI_Auxiliar" = $${paramIndex}
-      RETURNING "DNI_Auxiliar", "Nombres", "Apellidos", "Genero", "Estado", "Celular", "Correo_Electronico"
+      WHERE "Id_Auxiliar" = $${paramIndex}
+      RETURNING "Id_Auxiliar", "Nombres", "Apellidos", "Genero", "Estado", "Celular", "Correo_Electronico"
     `;
 
     const result = await query<
       Pick<
         T_Auxiliares,
-        | "DNI_Auxiliar"
+        | "Id_Auxiliar"
         | "Nombres"
         | "Apellidos"
         | "Genero"

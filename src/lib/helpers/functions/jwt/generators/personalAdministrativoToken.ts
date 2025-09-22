@@ -8,13 +8,13 @@ import { getRandomElementFromEnum } from "../../../getRandomElementFromEnum";
 
 // Función para generar un token JWT para Personal Administrativo
 export function generatePersonalAdministrativoToken(
-  dniPersonalAdministrativo: string,
+  idPersonalAdministrativo: string,
   nombre_usuario: string
 ): string {
   const jwtSecretKey = process.env.JWT_KEY_PERSONAL_ADMINISTRATIVO!;
 
   const payload: JWTPayload = {
-    ID_Usuario: dniPersonalAdministrativo,
+    ID_Usuario: idPersonalAdministrativo,
     Nombre_Usuario: nombre_usuario,
     RDP02_INSTANCE: getRandomElementFromEnum<RDP02>(RDP02),
     RDP03_INSTANCE: getRandomElementFromEnum<RDP03>(RDP03),

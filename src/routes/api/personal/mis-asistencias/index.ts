@@ -14,13 +14,13 @@ import {
   ProfesorPrimariaAuthenticated,
   ProfesorTutorSecundariaAuthenticated,
 } from "../../../../interfaces/shared/JWTPayload";
-import { buscarAsistenciaMensualPorRol } from "../../../../../core/databases/queries/RDP02/asistencias-mensuales/buscarAsistenciaMensualPorRolDNI";
+import { buscarAsistenciaMensualPorRol_Id } from "../../../../../core/databases/queries/RDP02/asistencias-mensuales/buscarAsistenciaMensualPorRol_Id";
 import {
   AsistenciaCompletaMensualDePersonal,
   GetAsistenciaMensualDePersonalSuccessResponse,
 } from "../../../../interfaces/shared/apis/api01/personal/types";
 import { Meses } from "../../../../interfaces/shared/Meses";
-import { buscarUsuarioGenericoPorRolyIDoDNI } from "../../../../../core/databases/queries/RDP02/usuarios-genericos/buscarUsuarioGenericoPorRolyIDoDNI";
+import { buscarUsuarioGenericoPorRolyId } from "../../../../../core/databases/queries/RDP02/usuarios-genericos/buscarUsuarioGenericoPorRolyID";
 
 const MisAsistenciasMensualesRouter = Router();
 
@@ -53,31 +53,31 @@ MisAsistenciasMensualesRouter.get("/", (async (req: Request, res: Response) => {
       } as ErrorResponseAPIBase);
     }
 
-    // Extraer DNI según el rol del usuario autenticado
-    let idOdniUsuario: string | number;
+    // Extraer ID según el rol del usuario autenticado
+    let idUsuario: string | number;
 
     switch (userRole) {
       case RolesSistema.Directivo:
-        idOdniUsuario = (userData as DirectivoAuthenticated).Id_Directivo;
+        idUsuario = (userData as DirectivoAuthenticated).Id_Directivo;
         break;
       case RolesSistema.ProfesorPrimaria:
-        idOdniUsuario = (userData as ProfesorPrimariaAuthenticated)
-          .DNI_Profesor_Primaria;
+        idUsuario = (userData as ProfesorPrimariaAuthenticated)
+          .Id_Profesor_Primaria;
         break;
 
       case RolesSistema.ProfesorSecundaria:
       case RolesSistema.Tutor:
-        idOdniUsuario = (userData as ProfesorTutorSecundariaAuthenticated)
-          .DNI_Profesor_Secundaria;
+        idUsuario = (userData as ProfesorTutorSecundariaAuthenticated)
+          .Id_Profesor_Secundaria;
         break;
 
       case RolesSistema.Auxiliar:
-        idOdniUsuario = (userData as AuxiliarAuthenticated).DNI_Auxiliar;
+        idUsuario = (userData as AuxiliarAuthenticated).Id_Auxiliar;
         break;
 
       case RolesSistema.PersonalAdministrativo:
-        idOdniUsuario = (userData as PersonalAdministrativoAuthenticated)
-          .DNI_Personal_Administrativo;
+        idUsuario = (userData as PersonalAdministrativoAuthenticated)
+          .Id_Personal_Administrativo;
         break;
 
       default:
@@ -89,9 +89,9 @@ MisAsistenciasMensualesRouter.get("/", (async (req: Request, res: Response) => {
     }
 
     // Buscar datos básicos del personal (para confirmar que existe y está activo)
-    const personalData = await buscarUsuarioGenericoPorRolyIDoDNI(
+    const personalData = await buscarUsuarioGenericoPorRolyId(
       userRole,
-      idOdniUsuario,
+      idUsuario,
       rdp02EnUso
     );
 
@@ -104,9 +104,9 @@ MisAsistenciasMensualesRouter.get("/", (async (req: Request, res: Response) => {
     }
 
     // Buscar asistencias del mes
-    const asistenciasData = await buscarAsistenciaMensualPorRol(
+    const asistenciasData = await buscarAsistenciaMensualPorRol_Id(
       userRole,
-      idOdniUsuario,
+      idUsuario,
       mes,
       rdp02EnUso
     );
@@ -123,7 +123,7 @@ MisAsistenciasMensualesRouter.get("/", (async (req: Request, res: Response) => {
     const asistenciaCompleta: AsistenciaCompletaMensualDePersonal = {
       Id_Registro_Mensual_Entrada: asistenciasData.Id_Registro_Mensual_Entrada,
       Id_Registro_Mensual_Salida: asistenciasData.Id_Registro_Mensual_Salida,
-      ID_O_DNI_Usuario: personalData.ID_O_DNI_Usuario,
+      ID_Usuario: personalData.ID_Usuario,
       Rol: personalData.Rol,
       Nombres: personalData.Nombres,
       Apellidos: personalData.Apellidos,

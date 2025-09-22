@@ -4,15 +4,15 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("RDP02_INS1_DATABASE_URL")
+  url      = env("RDP02_INS3_DATABASE_URL_DESA")
 }
 
 model T_Directivos {
   Id_Directivo         Int     @id @default(autoincrement())
   Nombres              String  @db.VarChar(60)
   Apellidos            String  @db.VarChar(60)
-  Genero               String  @db.VarChar(1) // Reemplazado ENUM por VARCHAR(1)
-  DNI                  String  @db.VarChar(8)
+  Genero               String  @db.VarChar(1)
+  Identificador_Nacional String  @db.VarChar(20) @unique
   Nombre_Usuario       String  @unique @db.VarChar(40)
   Correo_Electronico   String  @db.VarChar(70)
   Celular              String  @db.VarChar(9)
@@ -27,56 +27,9 @@ model T_Directivos {
   @@map("T_Directivos")
 }
 
-model T_Estudiantes {
-  DNI_Estudiante           String             @id @db.VarChar(8)
-  Nombres                  String             @db.VarChar(60)
-  Apellidos                String             @db.VarChar(60)
-  Estado                   Boolean
-  Google_Drive_Foto_ID     String?            @db.Text
-  Id_Aula                  Int?
-  aula                     T_Aulas?           @relation(fields: [Id_Aula], references: [Id_Aula])
-  relaciones               T_Relaciones_E_R[]
-  asistencias_primaria     T_A_E_P_1[]
-  asistencias_primaria_2   T_A_E_P_2[]
-  asistencias_primaria_3   T_A_E_P_3[]
-  asistencias_primaria_4   T_A_E_P_4[]
-  asistencias_primaria_5   T_A_E_P_5[]
-  asistencias_primaria_6   T_A_E_P_6[]
-  asistencias_secundaria_1 T_A_E_S_1[]
-  asistencias_secundaria_2 T_A_E_S_2[]
-  asistencias_secundaria_3 T_A_E_S_3[]
-  asistencias_secundaria_4 T_A_E_S_4[]
-  asistencias_secundaria_5 T_A_E_S_5[]
-
-  @@map("T_Estudiantes")
-}
-
-model T_Responsables {
-  DNI_Responsable      String             @id @db.VarChar(8)
-  Nombres              String             @db.VarChar(60)
-  Apellidos            String             @db.VarChar(60)
-  Nombre_Usuario       String             @unique @db.VarChar(40)
-  Celular              String?            @db.VarChar(9)
-  Contraseña          String             @db.Text
-  Google_Drive_Foto_ID String?            @db.Text
-  relaciones           T_Relaciones_E_R[]
-
-  @@map("T_Responsables")
-}
-
-model T_Relaciones_E_R {
-  Id_Relacion     Int            @id @default(autoincrement())
-  Tipo            String         @db.VarChar(1) // Reemplazado ENUM por VARCHAR(1)
-  DNI_Responsable String         @db.VarChar(8)
-  DNI_Estudiante  String         @db.VarChar(8)
-  responsable     T_Responsables @relation(fields: [DNI_Responsable], references: [DNI_Responsable])
-  estudiante      T_Estudiantes  @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante])
-
-  @@map("T_Relaciones_E_R")
-}
 
 model T_Profesores_Primaria {
-  DNI_Profesor_Primaria String                                          @id @db.VarChar(8)
+  Id_Profesor_Primaria String                                          @id @db.VarChar(20)
   Nombres               String                                          @db.VarChar(60)
   Apellidos             String                                          @db.VarChar(60)
   Genero                String                                          @db.VarChar(1) // Reemplazado ENUM por VARCHAR(1)
@@ -94,7 +47,7 @@ model T_Profesores_Primaria {
 }
 
 model T_Profesores_Secundaria {
-  DNI_Profesor_Secundaria String                                            @id @db.VarChar(8)
+  Id_Profesor_Secundaria String                                            @id @db.VarChar(20)
   Nombres                 String                                            @db.VarChar(60)
   Apellidos               String                                            @db.VarChar(60)
   Genero                  String                                            @db.VarChar(1) // Reemplazado ENUM por VARCHAR(1)
@@ -118,13 +71,11 @@ model T_Aulas {
   Grado                   Int                      @db.Integer
   Seccion                 String                   @db.VarChar(2)
   Color                   String                   @db.VarChar(15)
-  DNI_Profesor_Primaria   String?                  @db.VarChar(8)
-  DNI_Profesor_Secundaria String?                  @db.VarChar(8)
-  profesor_primaria       T_Profesores_Primaria?   @relation(fields: [DNI_Profesor_Primaria], references: [DNI_Profesor_Primaria])
-  profesor_secundaria     T_Profesores_Secundaria? @relation(fields: [DNI_Profesor_Secundaria], references: [DNI_Profesor_Secundaria])
-  estudiantes             T_Estudiantes[]
+  Id_Profesor_Primaria   String?                  @db.VarChar(20)
+  Id_Profesor_Secundaria String?                  @db.VarChar(20)
+  profesor_primaria       T_Profesores_Primaria?   @relation(fields: [Id_Profesor_Primaria], references: [Id_Profesor_Primaria])
+  profesor_secundaria     T_Profesores_Secundaria? @relation(fields: [Id_Profesor_Secundaria], references: [Id_Profesor_Secundaria])
   cursos_horario          T_Cursos_Horario[]
-
   @@map("T_Aulas")
 }
 
@@ -134,9 +85,9 @@ model T_Cursos_Horario {
   Dia_Semana                   Int                     @db.Integer
   Indice_Hora_Academica_Inicio Int                     @db.Integer
   Cant_Hora_Academicas         Int                     @db.Integer
-  DNI_Profesor_Secundaria      String                  @db.VarChar(8)
+  Id_Profesor_Secundaria      String                  @db.VarChar(20)
   Id_Aula_Secundaria           Int
-  profesor_secundaria          T_Profesores_Secundaria @relation(fields: [DNI_Profesor_Secundaria], references: [DNI_Profesor_Secundaria])
+  profesor_secundaria          T_Profesores_Secundaria @relation(fields: [Id_Profesor_Secundaria], references: [Id_Profesor_Secundaria])
   aula                         T_Aulas                 @relation(fields: [Id_Aula_Secundaria], references: [Id_Aula])
 
   @@map("T_Cursos_Horario")
@@ -146,8 +97,8 @@ model T_Control_Entrada_Mensual_Profesores_Primaria {
   Id_C_E_M_P_Profesores_Primaria Int                   @id @default(autoincrement())
   Mes                            Int                   @db.Integer
   Entradas                       Json
-  DNI_Profesor_Primaria          String                @db.VarChar(8)
-  profesor_primaria              T_Profesores_Primaria @relation(fields: [DNI_Profesor_Primaria], references: [DNI_Profesor_Primaria])
+  Id_Profesor_Primaria          String                @db.VarChar(20)
+  profesor_primaria              T_Profesores_Primaria @relation(fields: [Id_Profesor_Primaria], references: [Id_Profesor_Primaria])
 
   @@map("T_Control_Entrada_Mensual_Profesores_Primaria")
 }
@@ -156,8 +107,8 @@ model T_Control_Salida_Mensual_Profesores_Primaria {
   Id_C_E_M_P_Profesores_Primaria Int                   @id @default(autoincrement())
   Mes                            Int                   @db.Integer
   Salidas                        Json
-  DNI_Profesor_Primaria          String                @db.VarChar(8)
-  profesor_primaria              T_Profesores_Primaria @relation(fields: [DNI_Profesor_Primaria], references: [DNI_Profesor_Primaria])
+  Id_Profesor_Primaria          String                @db.VarChar(20)
+  profesor_primaria              T_Profesores_Primaria @relation(fields: [Id_Profesor_Primaria], references: [Id_Profesor_Primaria])
 
   @@map("T_Control_Salida_Mensual_Profesores_Primaria")
 }
@@ -166,8 +117,8 @@ model T_Control_Entrada_Mensual_Profesores_Secundaria {
   Id_C_E_M_P_Profesores_Secundaria Int                     @id @default(autoincrement())
   Mes                              Int                     @db.Integer
   Entradas                         Json
-  DNI_Profesor_Secundaria          String                  @db.VarChar(8)
-  profesor_secundaria              T_Profesores_Secundaria @relation(fields: [DNI_Profesor_Secundaria], references: [DNI_Profesor_Secundaria])
+  Id_Profesor_Secundaria          String                  @db.VarChar(20)
+  profesor_secundaria              T_Profesores_Secundaria @relation(fields: [Id_Profesor_Secundaria], references: [Id_Profesor_Secundaria])
 
   @@map("T_Control_Entrada_Mensual_Profesores_Secundaria")
 }
@@ -176,14 +127,14 @@ model T_Control_Salida_Mensual_Profesores_Secundaria {
   Id_C_E_M_P_Profesores_Secundaria Int                     @id @default(autoincrement())
   Mes                              Int                     @db.Integer
   Salidas                          Json
-  DNI_Profesor_Secundaria          String                  @db.VarChar(8)
-  profesor_secundaria              T_Profesores_Secundaria @relation(fields: [DNI_Profesor_Secundaria], references: [DNI_Profesor_Secundaria])
+  Id_Profesor_Secundaria          String                  @db.VarChar(20)
+  profesor_secundaria              T_Profesores_Secundaria @relation(fields: [Id_Profesor_Secundaria], references: [Id_Profesor_Secundaria])
 
   @@map("T_Control_Salida_Mensual_Profesores_Secundaria")
 }
 
 model T_Auxiliares {
-  DNI_Auxiliar         String  @id @db.VarChar(8)
+  Id_Auxiliar         String  @id @db.VarChar(20)
   Nombres              String  @db.VarChar(60)
   Apellidos            String  @db.VarChar(60)
   Genero               String  @db.VarChar(1) // Reemplazado ENUM por VARCHAR(1)
@@ -204,8 +155,8 @@ model T_Control_Entrada_Mensual_Auxiliar {
   Id_C_E_M_P_Auxiliar Int          @id @default(autoincrement())
   Mes                 Int          @db.SmallInt
   Entradas            Json
-  DNI_Auxiliar        String       @db.VarChar(8)
-  auxiliar            T_Auxiliares @relation(fields: [DNI_Auxiliar], references: [DNI_Auxiliar])
+  Id_Auxiliar        String       @db.VarChar(20)
+  auxiliar            T_Auxiliares @relation(fields: [Id_Auxiliar], references: [Id_Auxiliar])
 
   @@map("T_Control_Entrada_Mensual_Auxiliar")
 }
@@ -214,15 +165,15 @@ model T_Control_Salida_Mensual_Auxiliar {
   Id_C_E_M_P_Auxiliar Int          @id @default(autoincrement())
   Mes                 Int          @db.SmallInt
   Salidas             Json
-  DNI_Auxiliar        String       @db.VarChar(8)
-  auxiliar            T_Auxiliares @relation(fields: [DNI_Auxiliar], references: [DNI_Auxiliar])
+  Id_Auxiliar        String       @db.VarChar(20)
+  auxiliar            T_Auxiliares @relation(fields: [Id_Auxiliar], references: [Id_Auxiliar])
 
   @@map("T_Control_Salida_Mensual_Auxiliar")
 }
 
 // TABLA MODIFICADA: Se removieron Horario_Laboral_Entrada y Horario_Laboral_Salida
 model T_Personal_Administrativo {
-  DNI_Personal_Administrativo String  @id @db.VarChar(8)
+  Id_Personal_Administrativo String  @id @db.VarChar(20)
   Nombres                     String  @db.VarChar(60)
   Apellidos                   String  @db.VarChar(60)
   Genero                      String  @db.VarChar(1) // Reemplazado ENUM por VARCHAR(1)
@@ -249,8 +200,8 @@ model T_Horarios_Por_Dias_Personal_Administrativo {
   Dia                                 Int                       @db.SmallInt // 1-5 (Lunes a Viernes)
   Hora_Inicio                         DateTime                  @db.Time
   Hora_Fin                            DateTime                  @db.Time
-  DNI_Personal_Administrativo         String                    @db.VarChar(8)
-  personal_administrativo             T_Personal_Administrativo @relation(fields: [DNI_Personal_Administrativo], references: [DNI_Personal_Administrativo])
+  Id_Personal_Administrativo         String                    @db.VarChar(20)
+  personal_administrativo             T_Personal_Administrativo @relation(fields: [Id_Personal_Administrativo], references: [Id_Personal_Administrativo])
 
   @@map("T_Horarios_Por_Dias_Personal_Administrativo")
 }
@@ -259,8 +210,8 @@ model T_Control_Entrada_Mensual_Personal_Administrativo {
   Id_C_E_M_P_Administrativo   Int                       @id @default(autoincrement())
   Mes                         Int                       @db.SmallInt
   Entradas                    Json
-  DNI_Personal_Administrativo String                    @db.VarChar(8)
-  personal_administrativo     T_Personal_Administrativo @relation(fields: [DNI_Personal_Administrativo], references: [DNI_Personal_Administrativo])
+  Id_Personal_Administrativo String                    @db.VarChar(20)
+  personal_administrativo     T_Personal_Administrativo @relation(fields: [Id_Personal_Administrativo], references: [Id_Personal_Administrativo])
 
   @@map("T_Control_Entrada_Mensual_Personal_Administrativo")
 }
@@ -269,8 +220,8 @@ model T_Control_Salida_Mensual_Personal_Administrativo {
   Id_C_E_M_P_Administrativo   Int                       @id @default(autoincrement())
   Mes                         Int                       @db.SmallInt
   Salidas                     Json
-  DNI_Personal_Administrativo String                    @db.VarChar(8)
-  personal_administrativo     T_Personal_Administrativo @relation(fields: [DNI_Personal_Administrativo], references: [DNI_Personal_Administrativo])
+  Id_Personal_Administrativo String                    @db.VarChar(20)
+  personal_administrativo     T_Personal_Administrativo @relation(fields: [Id_Personal_Administrativo], references: [Id_Personal_Administrativo])
 
   @@map("T_Control_Salida_Mensual_Personal_Administrativo")
 }
@@ -367,141 +318,6 @@ model T_Codigos_OTP {
   @@map("T_Codigos_OTP")
 }
 
-// TABLAS DE ASISTENCIA PRIMARIA (6 tablas)
-
-model T_A_E_P_1 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-model T_A_E_P_2 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-model T_A_E_P_3 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-model T_A_E_P_4 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-model T_A_E_P_5 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-model T_A_E_P_6 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-// TABLAS DE ASISTENCIA SECUNDARIA (5 tablas)
-
-model T_A_E_S_1 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-model T_A_E_S_2 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-model T_A_E_S_3 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-model T_A_E_S_4 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
-
-model T_A_E_S_5 {
-  Id_Asistencia_Escolar_Mensual Int    @id @default(autoincrement())
-  DNI_Estudiante                String @db.VarChar(8)
-  Mes                           Int    @db.SmallInt
-  Estados                       String @db.Text
-
-  estudiante T_Estudiantes @relation(fields: [DNI_Estudiante], references: [DNI_Estudiante], onDelete: Cascade)
-
-  @@index([DNI_Estudiante])
-  @@index([Mes])
-}
 
 model T_Comunicados {
   Id_Comunicado          Int      @id @default(autoincrement())

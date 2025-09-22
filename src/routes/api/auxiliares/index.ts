@@ -10,7 +10,7 @@ import {
   UserErrorTypes,
   ValidationErrorTypes,
 } from "../../../interfaces/shared/errors";
-import { validateDNI } from "../../../lib/helpers/validators/data/validateDNI";
+import { validateIdentificadorDeUsuario } from "../../../lib/helpers/validators/data/validateIdentificadorDeUsuario";
 import { ValidatorConfig } from "../../../lib/helpers/validators/data/types";
 import { validateNames } from "../../../lib/helpers/validators/data/validateNombres";
 import { validateLastNames } from "../../../lib/helpers/validators/data/validateApellidos";
@@ -26,8 +26,7 @@ import {
   UpdateAuxiliarSuccessResponse,
 } from "../../../interfaces/shared/apis/api01/auxiliares/types";
 
-// Importar funciones de consulta
-import { buscarAuxiliarPorDNISelect } from "../../../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorDNI";
+import { buscarAuxiliarPorIdSelect } from "../../../../core/databases/queries/RDP02/auxiliares/buscarAuxiliarPorId";
 import { verificarExistenciaAuxiliar } from "../../../../core/databases/queries/RDP02/auxiliares/verificarExistenciaAuxiliar";
 import { buscarTodosLosAuxiliares } from "../../../../core/databases/queries/RDP02/auxiliares/buscarTodosLosAuxiliares";
 import { handleSQLError } from "../../../lib/helpers/handlers/errors/postgreSQL";
@@ -74,27 +73,27 @@ router.get("/", (async (req: Request, res: Response) => {
   }
 }) as any);
 
-// Obtener un auxiliar por DNI
-router.get("/:dni", (async (req: Request, res: Response) => {
+// Obtener un auxiliar por ID de usuario
+router.get("/:idUsuario", (async (req: Request, res: Response) => {
   try {
-    const { dni } = req.params;
+    const { idUsuario } = req.params;
     const rdp02EnUso = req.RDP02_INSTANCE!;
 
-    // Validar el formato del DNI
-    const dniValidation = validateDNI(dni, true);
-    if (!dniValidation.isValid) {
+    // Validar el formato del ID de usuario
+    const idUsuarioValidation = validateIdentificadorDeUsuario(idUsuario, true);
+    if (!idUsuarioValidation.isValid) {
       return res.status(400).json({
         success: false,
-        message: dniValidation.errorMessage,
-        errorType: ValidationErrorTypes.INVALID_DNI,
+        message: idUsuarioValidation.errorMessage,
+        errorType: ValidationErrorTypes.INVALID_USER_IDENTIFIER,
       } as ErrorResponseAPIBase);
     }
 
     // Obtener auxiliar
-    const auxiliar = await buscarAuxiliarPorDNISelect(
-      dni,
+    const auxiliar = await buscarAuxiliarPorIdSelect(
+      idUsuario,
       [
-        "DNI_Auxiliar",
+        "Id_Auxiliar",
         "Nombres",
         "Apellidos",
         "Celular",
@@ -138,25 +137,25 @@ router.get("/:dni", (async (req: Request, res: Response) => {
 }) as any);
 
 // Actualizar un auxiliar
-router.put("/:dni", (async (req: Request, res: Response) => {
+router.put("/:idUsuario", (async (req: Request, res: Response) => {
   try {
-    const { dni } = req.params;
+    const { idUsuario } = req.params;
     const rdp02EnUso = req.RDP02_INSTANCE!;
     const { Nombres, Apellidos, Genero, Celular, Correo_Electronico } =
       req.body as UpdateAuxiliarRequestBody;
 
-    // Validar el formato del DNI
-    const dniValidation = validateDNI(dni, true);
-    if (!dniValidation.isValid) {
+    // Validar el formato del ID de usuario
+    const idUsuarioValidation = validateIdentificadorDeUsuario(idUsuario, true);
+    if (!idUsuarioValidation.isValid) {
       return res.status(400).json({
         success: false,
-        message: dniValidation.errorMessage,
-        errorType: ValidationErrorTypes.INVALID_DNI,
+        message: idUsuarioValidation.errorMessage,
+        errorType: ValidationErrorTypes.INVALID_USER_IDENTIFIER,
       } as ErrorResponseAPIBase);
     }
 
     // Verificar si el auxiliar existe
-    const existingAuxiliar = await verificarExistenciaAuxiliar(dni, rdp02EnUso);
+    const existingAuxiliar = await verificarExistenciaAuxiliar(idUsuario, rdp02EnUso);
 
     if (!existingAuxiliar) {
       return res.status(404).json({
@@ -229,7 +228,7 @@ router.put("/:dni", (async (req: Request, res: Response) => {
 
     // Actualizar auxiliar
     const updatedAuxiliar = await actualizarDatosDeAuxiliar(
-      dni,
+      idUsuario,
       updateData,
       rdp02EnUso
     );
@@ -266,27 +265,27 @@ router.put("/:dni", (async (req: Request, res: Response) => {
 
 // Cambiar estado de un auxiliar (activar/desactivar)
 router.patch(
-  "/:dni/estado",
+  "/:idUsuario/estado",
   isDirectivoAuthenticated,
   checkAuthentication as any,
   (async (req: Request, res: Response) => {
     try {
-      const { dni } = req.params;
+      const { idUsuario } = req.params;
       const rdp02EnUso = req.RDP02_INSTANCE!;
 
-      // Validar el formato del DNI
-      const dniValidation = validateDNI(dni, true);
-      if (!dniValidation.isValid) {
+      // Validar el formato del ID de usuario
+      const idUsuarioValidation = validateIdentificadorDeUsuario(idUsuario, true);
+      if (!idUsuarioValidation.isValid) {
         return res.status(400).json({
           success: false,
-          message: dniValidation.errorMessage,
-          errorType: ValidationErrorTypes.INVALID_DNI,
+          message: idUsuarioValidation.errorMessage,
+          errorType: ValidationErrorTypes.INVALID_USER_IDENTIFIER,
         } as ErrorResponseAPIBase);
       }
 
       // Cambiar el estado del auxiliar
       const updatedAuxiliar = await cambiarEstadoAuxiliar(
-        dni,
+        idUsuario,
         undefined,
         rdp02EnUso
       );

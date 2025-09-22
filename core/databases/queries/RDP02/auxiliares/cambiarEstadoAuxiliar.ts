@@ -5,30 +5,30 @@ import { T_Auxiliares } from "@prisma/client";
 
 /**
  * Cambia el estado (activo/inactivo) de un auxiliar
- * @param dniAuxiliar DNI del auxiliar a modificar
+ * @param idAuxiliar ID del auxiliar a modificar
  * @param nuevoEstado Nuevo estado (opcional). Si no se proporciona, invierte el estado actual
  * @param instanciaEnUso Instancia específica donde ejecutar la consulta (opcional)
  * @returns Datos actualizados del auxiliar o null si no se encuentra
  */
 export async function cambiarEstadoAuxiliar(
-  dniAuxiliar: string,
+  idAuxiliar: string,
   nuevoEstado?: boolean,
   instanciaEnUso?: RDP02
 ): Promise<Pick<
   T_Auxiliares,
-  "DNI_Auxiliar" | "Nombres" | "Apellidos" | "Estado"
+  "Id_Auxiliar" | "Nombres" | "Apellidos" | "Estado"
 > | null> {
   try {
     // Primero, verificamos si el auxiliar existe y obtenemos su estado actual
     const sqlConsulta = `
-      SELECT "DNI_Auxiliar", "Estado", "Nombres", "Apellidos"
+      SELECT "Id_Auxiliar", "Estado", "Nombres", "Apellidos"
       FROM "T_Auxiliares"
-      WHERE "DNI_Auxiliar" = $1
+      WHERE "Id_Auxiliar" = $1
     `;
 
     const resultConsulta = await query<
-      Pick<T_Auxiliares, "DNI_Auxiliar" | "Estado" | "Nombres" | "Apellidos">
-    >(instanciaEnUso, sqlConsulta, [dniAuxiliar]);
+      Pick<T_Auxiliares, "Id_Auxiliar" | "Estado" | "Nombres" | "Apellidos">
+    >(instanciaEnUso, sqlConsulta, [idAuxiliar]);
 
     // Si no encontramos el auxiliar, retornamos null
     if (resultConsulta.rows.length === 0) {
@@ -45,13 +45,13 @@ export async function cambiarEstadoAuxiliar(
     const sqlUpdate = `
       UPDATE "T_Auxiliares"
       SET "Estado" = $1
-      WHERE "DNI_Auxiliar" = $2
-      RETURNING "DNI_Auxiliar", "Nombres", "Apellidos", "Estado"
+      WHERE "Id_Auxiliar" = $2
+      RETURNING "Id_Auxiliar", "Nombres", "Apellidos", "Estado"
     `;
 
     const resultUpdate = await query<
-      Pick<T_Auxiliares, "DNI_Auxiliar" | "Nombres" | "Apellidos" | "Estado">
-    >(instanciaEnUso, sqlUpdate, [estadoFinal, dniAuxiliar]);
+      Pick<T_Auxiliares, "Id_Auxiliar" | "Nombres" | "Apellidos" | "Estado">
+    >(instanciaEnUso, sqlUpdate, [estadoFinal, idAuxiliar]);
 
     // Retornamos los datos actualizados
     return resultUpdate.rows[0];

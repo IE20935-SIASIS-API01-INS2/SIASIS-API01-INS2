@@ -8,29 +8,33 @@ import {
   SystemErrorTypes,
   UserErrorTypes,
   DataErrorTypes,
+  ValidationErrorTypes,
 } from "../../../../interfaces/shared/errors";
 
 import wereObligatoryQueryParamsReceived from "../../../../middlewares/wereObligatoryQueryParamsReceived";
-import { buscarAsistenciaMensualPorRol } from "../../../../../core/databases/queries/RDP02/asistencias-mensuales/buscarAsistenciaMensualPorRolDNI";
+import { buscarAsistenciaMensualPorRol_Id } from "../../../../../core/databases/queries/RDP02/asistencias-mensuales/buscarAsistenciaMensualPorRol_Id";
 import {
   AsistenciaCompletaMensualDePersonal,
   GetAsistenciaMensualDePersonalSuccessResponse,
 } from "../../../../interfaces/shared/apis/api01/personal/types";
-import { buscarUsuarioGenericoPorRolyIDoDNI } from "../../../../../core/databases/queries/RDP02/usuarios-genericos/buscarUsuarioGenericoPorRolyIDoDNI";
+import { buscarUsuarioGenericoPorRolyId } from "../../../../../core/databases/queries/RDP02/usuarios-genericos/buscarUsuarioGenericoPorRolyID";
+import { extraerIdentificadorSinTipo, validateIdentificadorDeUsuario } from "../../../../lib/helpers/validators/data/validateIdentificadorDeUsuario";
+
+
 
 const AsistenciasMensualesDePersonalRouter = Router();
 
 AsistenciasMensualesDePersonalRouter.get(
   "/",
-  wereObligatoryQueryParamsReceived(["Rol", "ID_O_DNI", "Mes"]) as any,
+  wereObligatoryQueryParamsReceived(["Rol", "ID", "Mes"]) as any,
   (async (req: Request, res: Response) => {
     try {
-      const { Rol, ID_O_DNI, Mes } = req.query;
+      const { Rol, ID, Mes } = req.query;
       const rdp02EnUso = req.RDP02_INSTANCE!;
 
       // Convertir a tipos apropiados
       const rol = Rol as string;
-      const idODni = ID_O_DNI as string;
+      const idUsuario = ID as string;
       const mes = parseInt(Mes as string);
 
       // Validar que el rol es válido
@@ -43,13 +47,27 @@ AsistenciasMensualesDePersonalRouter.get(
         } as ErrorResponseAPIBase);
       }
 
-      // Validar formato del DNI (8 dígitos)
-      if (rol !== RolesSistema.Directivo && !/^\d{8}$/.test(idODni)) {
-        return res.status(400).json({
-          success: false,
-          message: "El DNI debe tener exactamente 8 dígitos numéricos",
-          errorType: RequestErrorTypes.INVALID_PARAMETERS,
-        } as ErrorResponseAPIBase);
+      // Validar formato del identificador usando la nueva función
+      if (rol !== RolesSistema.Directivo) {
+        const validacionIdentificador = validateIdentificadorDeUsuario(idUsuario, true);
+        
+        if (!validacionIdentificador.isValid) {
+          return res.status(400).json({
+            success: false,
+            message: validacionIdentificador.errorMessage || "Identificador de usuario inválido",
+            errorType: validacionIdentificador.errorType || ValidationErrorTypes.INVALID_FORMAT,
+          } as ErrorResponseAPIBase);
+        }
+      } else {
+        // Para directivos, validar que sea un número (ID de directivo)
+        const idDirectivo = parseInt(idUsuario);
+        if (isNaN(idDirectivo) || idDirectivo <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Para directivos, el ID debe ser un número entero positivo",
+            errorType: RequestErrorTypes.INVALID_PARAMETERS,
+          } as ErrorResponseAPIBase);
+        }
       }
 
       // Validar mes (1-12)
@@ -71,25 +89,37 @@ AsistenciasMensualesDePersonalRouter.get(
         } as ErrorResponseAPIBase);
       }
 
+      // Preparar el ID para la búsqueda
+      let idParaBusqueda: string | number = idUsuario;
+      
+      // Para roles que no son directivos, extraer solo el identificador sin tipo
+      // para mantener compatibilidad con la base de datos
+      if (rol !== RolesSistema.Directivo) {
+        idParaBusqueda = extraerIdentificadorSinTipo(idUsuario);
+      } else {
+        // Para directivos, usar el ID numérico
+        idParaBusqueda = parseInt(idUsuario);
+      }
+
       // Buscar datos básicos del personal
-      const personalData = await buscarUsuarioGenericoPorRolyIDoDNI(
+      const personalData = await buscarUsuarioGenericoPorRolyId(
         rol as RolesSistema,
-        idODni,
+        idParaBusqueda,
         rdp02EnUso
       );
 
       if (!personalData) {
         return res.status(404).json({
           success: false,
-          message: `No se encontró personal con rol "${rol}" y DNI "${idODni}", o el usuario está inactivo`,
+          message: `No se encontró personal con rol "${rol}" e identificador "${idUsuario}", o el usuario está inactivo`,
           errorType: UserErrorTypes.USER_NOT_FOUND,
         } as ErrorResponseAPIBase);
       }
 
       // Buscar asistencias del mes
-      const asistenciasData = await buscarAsistenciaMensualPorRol(
+      const asistenciasData = await buscarAsistenciaMensualPorRol_Id(
         rol as RolesSistema,
-        idODni,
+        idParaBusqueda as string, // Convertir a string para la función de asistencias
         mes,
         rdp02EnUso
       );
@@ -107,7 +137,7 @@ AsistenciasMensualesDePersonalRouter.get(
         Id_Registro_Mensual_Entrada:
           asistenciasData.Id_Registro_Mensual_Entrada,
         Id_Registro_Mensual_Salida: asistenciasData.Id_Registro_Mensual_Salida,
-        ID_O_DNI_Usuario: personalData.ID_O_DNI_Usuario,
+        ID_Usuario: personalData.ID_Usuario,
         Rol: personalData.Rol,
         Nombres: personalData.Nombres,
         Google_Drive_Foto_ID: personalData.Google_Drive_Foto_ID,

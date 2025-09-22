@@ -13,7 +13,7 @@ import {
   TokenErrorTypes,
   UserErrorTypes,
 } from "../interfaces/shared/errors";
-import { buscarTutorPorDNIConAula } from "../../core/databases/queries/RDP02/profesor-secundaria/buscarTutorPorDNIConAula";
+import { buscarTutorPorIdConAula } from "../../core/databases/queries/RDP02/profesor-secundaria/buscarTutorPorIdConAula";
 
 // Middleware para verificar si el usuario es un Tutor de Secundaria
 const isTutorAuthenticated = async (
@@ -101,8 +101,8 @@ const isTutorAuthenticated = async (
           return; // La función verificarBloqueoRol ya llamó a next()
         }
 
-        // Utilizar la función buscarTutorPorDNIConAula
-        const tutor = await buscarTutorPorDNIConAula(decodedPayload.ID_Usuario);
+        // Utilizar la función buscarTutorPorIdConAula
+        const tutor = await buscarTutorPorIdConAula(decodedPayload.ID_Usuario);
 
         if (!tutor) {
           req.authError = {
@@ -130,7 +130,7 @@ const isTutorAuthenticated = async (
 
       // Agregar información del usuario decodificada a la solicitud para uso posterior
       req.user = {
-        DNI_Profesor_Secundaria: decodedPayload.ID_Usuario,
+        Id_Profesor_Secundaria: decodedPayload.ID_Usuario,
         Nombre_Usuario: decodedPayload.Nombre_Usuario,
       } as ProfesorTutorSecundariaAuthenticated;
 

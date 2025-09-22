@@ -73,12 +73,12 @@ export async function buscarProfesorSecundariaConAulasPorNombreDeUsuario(
   const sqlAulas = `
     SELECT "Id_Aula", "Nivel", "Grado", "Seccion", "Color"
     FROM "T_Aulas"
-    WHERE "DNI_Profesor_Secundaria" = $1
+    WHERE "Id_Profesor_Secundaria" = $1
   `;
 
   const resultAulas = await query<
     Pick<T_Aulas, "Id_Aula" | "Nivel" | "Grado" | "Seccion" | "Color">
-  >(instanciaEnUso, sqlAulas, [profesor.DNI_Profesor_Secundaria]);
+  >(instanciaEnUso, sqlAulas, [profesor.Id_Profesor_Secundaria]);
 
   // Combinamos los resultados
   return {
